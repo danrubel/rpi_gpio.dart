@@ -1,7 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <wiringPi.h>
+#include "wiringPi/wiringPi.h"
 #include "include/dart_api.h"
 #include "include/dart_native_api.h"
 

@@ -28,8 +28,10 @@ main(List<String> args) {
   assertRunningOnRaspberryPi();
   var nativeDir = new Directory(join(rpiGpioDir.path, 'src', 'native'));
   var buildScriptFile = new File(join(nativeDir.path, 'build_lib'));
-  Process.runSync(
+  var buildResult = Process.runSync(
       buildScriptFile.path, [buildScriptVersion.toString(), dartSdk.path]);
+  print(buildResult.stdout);
+  print(buildResult.stderr);
 }
 
 /// Assert that the given file or directory exists.
