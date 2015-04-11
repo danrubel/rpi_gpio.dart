@@ -29,6 +29,9 @@ the rpi_gpio package) run the following command to build the native library
     pub global run rpi_gpio:build_lib
 ```
 
+These two steps must be performed when you install and each time you upgrade
+the rpi_gpio package.
+
 ## Example
 
  * A [simple example](example/pwm_motor_sample.dart) shows how to drive
