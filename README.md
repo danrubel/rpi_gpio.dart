@@ -17,6 +17,18 @@ to [pub.dartlang.org](https://pub.dartlang.org/), so there are some extra
 steps necessary to compile the native library on the RPi before this package
 can be used.
 
+1) Activate the rpi_gpio package using the
+[pub global](https://www.dartlang.org/tools/pub/cmd/pub-global.html) command.
+```
+    pub global activate rpi_gpio
+```
+
+2) From your application directory (the application that references
+the rpi_gpio package) run the following command to build the native library
+```
+    pub global run rpi_gpio:build_lib
+```
+
 ## Example
 
  * A [simple example](example/pwm_motor_sample.dart) shows how to drive

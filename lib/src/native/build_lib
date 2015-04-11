@@ -1,0 +1,36 @@
+#!/bin/sh
+#
+# Build the librpi_gpio_ext.so native library on the Raspberry Pi.
+# The generated native library file is referenced by rpi_gpio.dart via
+# import 'dart-ext:rpi_gpio_ext'
+#
+# Arguments: <buildScriptVersion> <DartSdkPath>
+#
+# Typically, this script is run by calling
+#
+#    pub global run rpi_gpio:build_lib
+#
+# See README for setup instructions
+
+# exit on error
+set -e
+
+#DARTVM=$(readlink `which dart`)
+#DARTBIN=$(dirname $DARTVM)
+#DARTSDK=$(dirname $DARTBIN)
+DARTSDK=$2
+
+# The package's tool/src directory
+cd $(dirname $0)
+echo building in `pwd`
+
+# Build the wiring pi library
+#cd wiringPi
+#sudo make install
+#cd ..
+
+g++ -fPIC -I$DARTSDK/ -c rpi_gpio_ext.cc
+gcc -shared -Wl,wiringPi/wiringPi.o,wiringPi/softPwm.o,wiringPi/softTone.o,-soname,librpi_gpio_ext.so -o librpi_gpio_ext.so rpi_gpio_ext.o
+
+# Copy the library
+cp librpi_gpio_ext.so ../../librpi_gpio_ext.so

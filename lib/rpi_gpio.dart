@@ -2,6 +2,8 @@ library rpi_gpio;
 
 import 'dart:io';
 
+import 'package:path/path.dart';
+
 const PinMode input = PinMode.input;
 const PinMode output = PinMode.output;
 const PinPull pullDown = PinPull.down;
@@ -44,7 +46,12 @@ const _pwmPinNum = 1;
 /// Return [true] if this is running on a Raspberry Pi.
 bool get isRaspberryPi =>
     //TODO need a better test for Raspberry Pi
-    Platform.isLinux && new File('/home/pi/.raspberrypi').existsSync();
+    Platform.isLinux && raspberryPiMarkerFile.existsSync();
+
+/// Return a marker file used to determine if the code is executing on the RPi.
+File get raspberryPiMarkerFile =>
+    //TODO need a better test for Raspberry Pi
+    new File(join(Platform.environment['HOME'], '.raspberrypi'));
 
 /// [Gpio] provides access to the General Purpose I/O (GPIO) pins.
 /// Pulse width modulation can be simulated on pins other than pin 1
