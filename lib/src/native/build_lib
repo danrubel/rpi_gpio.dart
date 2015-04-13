@@ -34,7 +34,7 @@ check_make_ok() {
     echo ""
     echo "Make Failed..."
     echo "Please check the messages and fix any problems."
-    echo "If you're still stuck, then please open an issue at 
+    echo "If you're still stuck, then please open an issue at"
     echo "https://github.com/danrubel/dart_rpi_gpio/issues"
     echo "with all the output and as many details as you can"
     exit 1

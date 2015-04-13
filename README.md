@@ -15,7 +15,8 @@ in C and built on top of the [wiringPi](http://wiringpi.com/) library.
 For security reasons, authors cannot publish binary content
 to [pub.dartlang.org](https://pub.dartlang.org/), so there are some extra
 steps necessary to compile the native library on the RPi before this package
-can be used.
+can be used. These two steps must be performed when you install and each time
+you upgrade the rpi_gpio package.
 
 1) Activate the rpi_gpio package using the
 [pub global](https://www.dartlang.org/tools/pub/cmd/pub-global.html) command.
@@ -29,8 +30,13 @@ the rpi_gpio package) run the following command to build the native library
     pub global run rpi_gpio:build_lib
 ```
 
-These two steps must be performed when you install and each time you upgrade
-the rpi_gpio package.
+[pub global activate](https://www.dartlang.org/tools/pub/cmd/pub-global.html#activating-a-package)
+makes the Dart scripts in the rpi_gpio/bin directory runnable
+from the command line. 
+[pub global run](https://www.dartlang.org/tools/pub/cmd/pub-global.html#running-a-script)
+rpi_gpio:build_lib runs the [rpi_gpio/bin/build_lib.dart](bin/build_lib.dart)
+program which in turn calls the [build_lib](lib/src/native/build_lib) script
+to compile the native librpi_gpio_ext.so library for the rpi_gpio package.
 
 ## Example
 

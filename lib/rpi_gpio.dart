@@ -2,8 +2,6 @@ library rpi_gpio;
 
 import 'dart:io';
 
-import 'package:path/path.dart';
-
 const PinMode input = PinMode.input;
 const PinMode output = PinMode.output;
 const PinPull pullDown = PinPull.down;
@@ -51,7 +49,7 @@ bool get isRaspberryPi =>
 /// Return a marker file used to determine if the code is executing on the RPi.
 File get raspberryPiMarkerFile =>
     //TODO need a better test for Raspberry Pi
-    new File(join(Platform.environment['HOME'], '.raspberrypi'));
+    new File('/home/pi/.raspberrypi');
 
 /// [Gpio] provides access to the General Purpose I/O (GPIO) pins.
 /// Pulse width modulation can be simulated on pins other than pin 1
@@ -88,6 +86,7 @@ class Gpio {
     while (_pins.length <= pinNum) _pins.add(null);
     Pin pin = _pins[pinNum];
     if (pin == null) {
+      if (mode == null) throw new GpioException._missingMode(pin);
       pin = new Pin._(pinNum, mode);
       _pins[pinNum] = pin;
     } else if (mode != null) {
@@ -107,6 +106,9 @@ class GpioException {
 
   GpioException._selector(this.pin, String selector)
       : message = 'Invalid call: $selector for mode';
+
+  GpioException._missingMode(this.pin)
+      : message = 'Must specify initial pin mode';
 
   @override
   String toString() => '$message pin: $pin';

@@ -115,7 +115,7 @@ main() async {
     test('pulseWidth and digitalRead - hardware pwm gpio.1', () async {
       Pin sensorPin = gpio.pin(0, input)..pull = pullDown;
       Pin ledPin = gpio.pin(1, pulsed)..pulseWidth = 0;
-      await _delay(250);
+      await _delay(5);
       expect(sensorPin.value, 0);
 
       // Increase and note threshold at which pin 0 state changes
@@ -136,7 +136,7 @@ main() async {
     test('pulseWidth and digitalRead - software pwm gpio.3', () async {
       Pin sensorPin = gpio.pin(2, input)..pull = pullDown;
       Pin ledPin = gpio.pin(3, pulsed)..pulseWidth = 0;
-      await _delay(250);
+      await _delay(5);
       expect(sensorPin.value, 0);
 
       // Increase and note threshold at which pin 0 state changes

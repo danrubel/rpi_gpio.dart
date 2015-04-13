@@ -24,14 +24,28 @@ main(List<String> args) {
   var rpiGpioDir = new Directory(pubResult['packages'][rpiGpioPkgName]);
   print('Building library in ${rpiGpioDir.path}');
 
+  // Display the version of the rpi_gpio being built
+  var pubspecFile = new File(join(rpiGpioDir.path, 'pubspec.yaml'));
+  assertExists('pubspec', pubspecFile);
+  var pubspec = pubspecFile.readAsStringSync();
+  print('rpi_gpio version ${parseVersion(pubspec)}');
+
   // Build the native library
-  assertRunningOnRaspberryPi();
   var nativeDir = new Directory(join(rpiGpioDir.path, 'src', 'native'));
   var buildScriptFile = new File(join(nativeDir.path, 'build_lib'));
+  assertRunningOnRaspberryPi();
   var buildResult = Process.runSync(
       buildScriptFile.path, [buildScriptVersion.toString(), dartSdk.path]);
   print(buildResult.stdout);
   print(buildResult.stderr);
+}
+
+/// Parse the given content and return the version string
+String parseVersion(String pubspec) {
+  var key = 'version:';
+  int start = pubspec.indexOf(key) + key.length;
+  int end = pubspec.indexOf('\n', start);
+  return pubspec.substring(start, end).trim();
 }
 
 /// Assert that the given file or directory exists.
