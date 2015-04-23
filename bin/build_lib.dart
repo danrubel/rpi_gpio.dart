@@ -10,11 +10,23 @@ const buildScriptVersion = 1;
 main(List<String> args) {
 
   // Locate the Dart SDK
-  var dartVm = new File(Platform.executable);
+  File dartVm = new File(Platform.executable);
+  if (!dartVm.isAbsolute) {
+    print('Dart VM... ${dartVm.path}');
+    String path = Process.runSync('which', ['dart']).stdout;
+    dartVm = new File(path.trim());
+  }
+  Directory dartSdk = dartVm.parent.parent;
+  File headerFile = new File(join(dartSdk.path, 'include', 'dart_api.h'));
+  if (!headerFile.existsSync()) {
+    print('Dart VM... ${dartVm.path}');
+    String path = Process.runSync('readlink', ['-f', dartVm.path]).stdout;
+    dartVm = new File(path.trim());
+    dartSdk = dartVm.parent.parent;
+    headerFile = new File(join(dartSdk.path, 'include', 'dart_api.h'));
+  }
   print('Dart VM... ${dartVm.path}');
-  var dartSdk = dartVm.parent.parent;
   print('Dart SDK... ${dartSdk.path}');
-  var headerFile = new File(join(dartSdk.path, 'include', 'dart_api.h'));
   assertExists('include file', headerFile);
 
   // Run pub list to determine the location of the GPIO package being used
@@ -25,7 +37,7 @@ main(List<String> args) {
   print('Building library in ${rpiGpioDir.path}');
 
   // Display the version of the rpi_gpio being built
-  var pubspecFile = new File(join(rpiGpioDir.path, 'pubspec.yaml'));
+  var pubspecFile = new File(join(rpiGpioDir.path, '..', 'pubspec.yaml'));
   assertExists('pubspec', pubspecFile);
   var pubspec = pubspecFile.readAsStringSync();
   print('rpi_gpio version ${parseVersion(pubspec)}');
