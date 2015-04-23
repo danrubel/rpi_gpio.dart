@@ -5,7 +5,7 @@ import 'dart:async';
 import 'package:rpi_gpio/rpi_hardware.dart';
 
 /// Low level calls to blink an LED
-/// connected to GPIO 1 (BMC_GPIO 18, Physical Pin 12).
+/// connected to Pin 1 (BMC_GPIO 18, Physical Pin 12).
 ///
 /// Typically, users access the GPIO pins via package:rpi_gpio/rpi_gpio.dart
 /// as shown in the blink_sample.dart rather than using this lower level API.
