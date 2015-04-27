@@ -2,6 +2,8 @@ library rpi_gpio;
 
 import 'dart:io';
 
+import 'package:rpi_gpio/rpi_pwm.dart';
+
 const PinMode input = PinMode.input;
 const PinMode output = PinMode.output;
 const PinPull pullDown = PinPull.down;
@@ -38,8 +40,6 @@ const List<String> _pinDescriptions = const [
   'Pin 19 (BMC_GPIO 30, Phys P5-5)',
   'Pin 20 (BMC_GPIO 31, Phys P5-6)',
 ];
-
-const _pwmPinNum = 1;
 
 /// Return [true] if this is running on a Raspberry Pi.
 bool get isRaspberryPi =>
@@ -78,7 +78,13 @@ class Gpio {
 
   List<Pin> _pins = <Pin>[];
 
-  Gpio._();
+  /// For emulating pulse width modulation on pins other than pin 1.
+  SoftwarePWM _softPwm;
+
+  Gpio._() {
+    if (_hardware == null) throw new GpioException._setHardware();
+    _softPwm = new SoftwarePWM(_hardware);
+  }
 
   /// Return the [Pin] representing the specified GPIO pin
   /// where [pinNum] is the wiringPi pin number.
@@ -104,11 +110,15 @@ class GpioException {
       : pin = null,
         message = 'Gpio.hardware has already been set';
 
+  GpioException._missingMode(this.pin)
+      : message = 'Must specify initial pin mode';
+
   GpioException._selector(this.pin, String selector)
       : message = 'Invalid call: $selector for mode';
 
-  GpioException._missingMode(this.pin)
-      : message = 'Must specify initial pin mode';
+  GpioException._setHardware()
+      : pin = null,
+        message = 'Gpio.hardware must be set';
 
   @override
   String toString() => '$message pin: $pin';
@@ -150,8 +160,17 @@ class Pin {
 
   /// Set the mode ([input], [output], [pulsed]) for this pin.
   void set mode(PinMode mode) {
+    if (_mode == pulsed && mode != pulsed) {
+      // Turn off software simulated pwm
+      Gpio._instance._softPwm.pulseWidth(pin, null);
+    }
     _mode = mode;
-    Gpio._hardware.pinMode(pin, mode.index);
+    if (pin != 1 && mode == pulsed) {
+      // Simulate pulse width modulation using standard output mode
+      Gpio._hardware.pinMode(pin, output.index);
+    } else {
+      Gpio._hardware.pinMode(pin, mode.index);
+    }
   }
 
   /// Return the state of the pin's pull up/down resistor
@@ -171,7 +190,11 @@ class Pin {
   /// PWM on all other pins must be simulated via software.
   void set pulseWidth(int pulseWidth) {
     if (mode != pulsed) throw new GpioException._selector(this, 'pulseWidth');
-    Gpio._hardware.pwmWrite(pin, pulseWidth);
+    if (pin == 1) {
+      Gpio._hardware.pwmWrite(pin, pulseWidth);
+    } else {
+      Gpio._instance._softPwm.pulseWidth(pin, pulseWidth);
+    }
   }
 
   /// Return the digital value (0 = low, 1 = high) for this pin.

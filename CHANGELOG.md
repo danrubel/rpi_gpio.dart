@@ -4,4 +4,4 @@
 
  * Read and write digital values
  * Hardware pulse width modulation on pin 1
- * Software simulated pwm for other pins
+ * Software simulated pwm for other pins (work in progress)

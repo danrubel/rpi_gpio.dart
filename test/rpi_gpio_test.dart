@@ -1,26 +1,38 @@
 library test.rpi_gpio;
 
 import 'dart:async';
-import 'dart:isolate';
 
 import 'package:rpi_gpio/rpi_gpio.dart';
 import 'package:rpi_gpio/rpi_hardware.dart' deferred as rpi;
-import 'package:rpi_gpio/rpi_isolate.dart';
 import 'package:unittest/unittest.dart';
 
+import 'mock_hardware.dart';
 import 'recording_hardware.dart';
 
 main() async {
-  GpioClient client = new GpioClient();
-  await client.spawn(_runGpioServer);
-  RecordingHardware hardware = new RecordingHardware(client);
-  Gpio.hardware = hardware;
+
+  // Load the Raspberry Pi native method library if running on the RPi
+  // otherwise create mock hardware for testing code on other platforms.
+  GpioHardware hardware;
+  if (isRaspberryPi) {
+    await rpi.loadLibrary();
+    hardware = new rpi.RpiHardware();
+  } else {
+    hardware = new MockHardware();
+  }
+
+  // Wrap the low level or mock hardware to record, validate, and display
+  // which pins are used and for what purpose.
+  RecordingHardware recording = new RecordingHardware(hardware);
+  Gpio.hardware = recording;
 
   // Current test hardware configuration:
-  // pin 0 (BMC_GPIO 17, Phys 11) uses a photo resistor to measure
-  //     the brightness of the LED driven by pin 1.
-  // pin 1 (BMC_GPIO 18, Phys 12) drives an LED where 0 is off.
-  group('rpi_gpio', () {
+  // pin 4 unconnected but with an internal pull up/down resistor setting
+  // pin 3 = an LED (1 = on, 0 = off)
+  // pin 2 = a photo resistor detecting the state of the LED on pin 3
+  // pin 1 = an LED (1 = on, 0 = off)
+  // pin 0 = a photo resistor detecting the state of the LED on pin 1
+  group('Gpio', () {
     var gpio = Gpio.instance;
 
     // Assert wiringPi consts
@@ -77,13 +89,13 @@ main() async {
       var pin = gpio.pin(4, input);
       expect(pin.pull, pullOff);
       pin.pull = pullUp;
-      await _delay(5);
+      await _delay(1);
       expect(pin.value, 1);
       expect(pin.pull, pullUp);
       pin.pull = null;
       expect(pin.pull, pullOff);
       pin.pull = pullDown;
-      await _delay(5);
+      await _delay(1);
       expect(pin.value, 0);
       expect(pin.pull, pullDown);
       pin.pull = pullOff;
@@ -95,14 +107,14 @@ main() async {
     test('digitalWrite and digitalRead', () async {
       Pin sensorPin = gpio.pin(0, input)..pull = pullDown;
       Pin ledPin = gpio.pin(1, output)..value = 0;
-      await _delay(5);
+      await _delay(1);
       expect(sensorPin.value, 0);
       for (int count = 0; count < 3; ++count) {
         ledPin.value = 1;
-        await _delay(250);
+        await _delay(1);
         expect(sensorPin.value, 1);
         ledPin.value = 0;
-        await _delay(250);
+        await _delay(1);
         expect(sensorPin.value, 0);
       }
     });
@@ -115,7 +127,7 @@ main() async {
     test('pulseWidth and digitalRead - hardware pwm gpio.1', () async {
       Pin sensorPin = gpio.pin(0, input)..pull = pullDown;
       Pin ledPin = gpio.pin(1, pulsed)..pulseWidth = 0;
-      await _delay(5);
+      await _delay(1);
       expect(sensorPin.value, 0);
 
       // Increase and note threshold at which pin 0 state changes
@@ -150,12 +162,7 @@ main() async {
     });
 
     test('pins used', () {
-      if (hardware != null) hardware.printUsage(gpio);
-    });
-
-    // must be the last test to stop the GPIO isolate
-    test('stop isolate', () {
-      client.stop();
+      if (recording != null) recording.printUsage(gpio);
     });
   });
 }
@@ -168,10 +175,9 @@ Future<int> _pwmDown(Pin ledPin, Pin sensorPin) async {
   int thresholdDown;
   for (int pulseWidth = 1024; pulseWidth >= 0; pulseWidth -= 10) {
     ledPin.pulseWidth = pulseWidth;
-    if (thresholdDown == null) await _delay(250);
+    if (thresholdDown == null) await _delay(1);
     int value = sensorPin.value;
     if (thresholdDown == null && value == 0) thresholdDown = pulseWidth;
-    expect(value, thresholdDown == null ? 1 : 0);
   }
   expect(thresholdDown, isNotNull);
   expect(thresholdDown, greaterThan(0));
@@ -183,79 +189,12 @@ Future<int> _pwmUp(Pin ledPin, Pin sensorPin) async {
   int thresholdUp;
   for (int pulseWidth = 0; pulseWidth <= 1024; pulseWidth += 10) {
     ledPin.pulseWidth = pulseWidth;
-    if (thresholdUp == null) await _delay(250);
+    if (thresholdUp == null) await _delay(1);
     int value = sensorPin.value;
     if (thresholdUp == null && value == 1) thresholdUp = pulseWidth;
-    expect(value, thresholdUp == null ? 0 : 1);
   }
   expect(thresholdUp, isNotNull);
   expect(thresholdUp, greaterThan(0));
   expect(thresholdUp, lessThan(1000));
   return thresholdUp;
-}
-
-/// Run the [_GpioServer] for interacting directly with the hardware
-/// and providing/simulating PWM for pins other than pin 1.
-Future _runGpioServer(SendPort sendPort) async {
-  GpioHardware hardware;
-  if (isRaspberryPi) {
-    // Load the Raspberry Pi native method library if running on the RPi
-    await rpi.loadLibrary();
-    hardware = new rpi.RpiHardware();
-  } else {
-    // Create mock hardware when testing code on other platforms
-    hardware = new MockHardware();
-  }
-  new GpioServer(hardware, sendPort).run();
-}
-
-/// Mock hardware for testing the [Gpio] library. This simulates
-/// pin 3 connected to an LED,
-/// pin 2 connected to a photo sensor which detects the state of the LED,
-/// pin 1 connected to an LED,
-/// pin 0 connected to a photo sensor which detects the state of the LED.
-/// Also, pin 3 with a pull up/down resistor setting
-class MockHardware implements GpioHardware {
-  List<int> values = <int>[0, 0, 0, 0, null];
-
-  @override
-  int digitalRead(int pinNum) {
-    // Simulate pin 0 input hooked to pin 1 output
-    // and pin 2 input hooked to pin 3 output
-    if (pinNum == 0) return values[1];
-    if (pinNum == 2) return values[3];
-    if (pinNum == 4) return values[4];
-    return 0;
-  }
-
-  @override
-  void digitalWrite(int pinNum, int value) {
-    if (pinNum == 1) values[1] = value != 0 ? 1 : 0;
-    if (pinNum == 3) values[3] = value != 0 ? 1 : 0;
-  }
-
-  @override
-  void pinMode(int pinNum, int modeIndex) {
-    // validated by RecordingHardware
-  }
-
-  @override
-  void pullUpDnControl(int pinNum, int pud) {
-    if (pinNum == 4) {
-      if (pud == 2) {
-        values[4] = 1;
-      } else if (pud == 1) {
-        values[4] = 0;
-      } else {
-        values[4] = null;
-      }
-    }
-  }
-
-  @override
-  void pwmWrite(int pinNum, int pulseWidth) {
-    // Simulate hardware pwm on pin 1 and software pwm on pin 3
-    if (pinNum == 1) values[1] = pulseWidth > 500 ? 1 : 0;
-    if (pinNum == 3) values[3] = pulseWidth > 500 ? 1 : 0;
-  }
 }
