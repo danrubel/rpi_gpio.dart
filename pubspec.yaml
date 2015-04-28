@@ -5,7 +5,7 @@ description: >
 author: Dan Rubel <danrubel@google.com>
 homepage: https://github.com/danrubel/dart_rpi_gpio
 dependencies:
-  path: any
+  path: '>=1.0.0 <2.0.0'
 environment:
   sdk: '>=1.0.0 <2.0.0'
 dev_dependencies:
