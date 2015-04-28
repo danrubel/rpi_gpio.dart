@@ -40,8 +40,10 @@ to compile the native librpi_gpio_ext.so library for the rpi_gpio package.
 
 ## Example
 
- * A [simple example](example/pwm_motor_sample.dart) shows how to drive
-   motors using the [high level GPIO library](lib/rpi_gpio.dart).
+ * A [blinking LED](example/blink_sample.dart) example
+   and a [motor driver](example/pwm_motor_sample.dart) example
+   demonstrate using the [high level GPIO library](lib/rpi_gpio.dart).
  
- * A simple [blinking LED example](example/hardware_blink_sample.dart)
-   shows how to use the [low level hardware API](lib/rpi_hardware.dart).
+ * A second [blinking LED](example/blink_sample_hardware_api.dart)
+   demonstrates using the [low level hardware API](lib/rpi_hardware.dart).
+
