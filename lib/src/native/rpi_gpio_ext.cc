@@ -40,10 +40,10 @@ Dart_Handle rpi_gpio_wiringPi_init() {
 // int _digitalRead(int pin) native "digitalRead";
 void digitalRead(Dart_NativeArguments arguments) {
   Dart_EnterScope();
-  Dart_Handle pin_object = HandleError(Dart_GetNativeArgument(arguments, 1));
-  int64_t pin;
-  HandleError(Dart_IntegerToInt64(pin_object, &pin));
-  int value = digitalRead(pin);
+  Dart_Handle pin_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
+  int64_t pin_num;
+  HandleError(Dart_IntegerToInt64(pin_obj, &pin_num));
+  int value = digitalRead(pin_num);
   Dart_Handle result = HandleError(Dart_NewInteger(value));
   Dart_SetReturnValue(arguments, result);
   Dart_ExitScope();
@@ -53,12 +53,12 @@ void digitalRead(Dart_NativeArguments arguments) {
 // void _digitalWrite(int pin, int value) native "digitalWrite";
 void digitalWrite(Dart_NativeArguments arguments) {
   Dart_EnterScope();
-  Dart_Handle pin_object = HandleError(Dart_GetNativeArgument(arguments, 1));
-  Dart_Handle value_object = HandleError(Dart_GetNativeArgument(arguments, 2));
-  int64_t pin, value;
-  HandleError(Dart_IntegerToInt64(pin_object, &pin));
-  HandleError(Dart_IntegerToInt64(value_object, &value));
-  digitalWrite(pin, value);
+  Dart_Handle pin_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
+  Dart_Handle value_obj = HandleError(Dart_GetNativeArgument(arguments, 2));
+  int64_t pin_num, value;
+  HandleError(Dart_IntegerToInt64(pin_obj, &pin_num));
+  HandleError(Dart_IntegerToInt64(value_obj, &value));
+  digitalWrite(pin_num, value);
   Dart_ExitScope();
 }
 
@@ -66,12 +66,12 @@ void digitalWrite(Dart_NativeArguments arguments) {
 // void _pinMode(int pin, int mode) native "pinMode";
 void pinMode(Dart_NativeArguments arguments) {
   Dart_EnterScope();
-  Dart_Handle pin_object = HandleError(Dart_GetNativeArgument(arguments, 1));
-  Dart_Handle mode_object = HandleError(Dart_GetNativeArgument(arguments, 2));
-  int64_t pin, mode;
-  HandleError(Dart_IntegerToInt64(pin_object, &pin));
-  HandleError(Dart_IntegerToInt64(mode_object, &mode));
-  pinMode(pin, mode);
+  Dart_Handle pin_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
+  Dart_Handle mode_obj = HandleError(Dart_GetNativeArgument(arguments, 2));
+  int64_t pin_num, mode;
+  HandleError(Dart_IntegerToInt64(pin_obj, &pin_num));
+  HandleError(Dart_IntegerToInt64(mode_obj, &mode));
+  pinMode(pin_num, mode);
   Dart_ExitScope();
 }
 
@@ -80,12 +80,12 @@ void pinMode(Dart_NativeArguments arguments) {
 // The given pin should be already set as an input.
 void pullUpDnControl (Dart_NativeArguments arguments) {
   Dart_EnterScope();
-  Dart_Handle pin_object = HandleError(Dart_GetNativeArgument(arguments, 1));
-  Dart_Handle pud_object = HandleError(Dart_GetNativeArgument(arguments, 2));
-  int64_t pin, pud;
-  HandleError(Dart_IntegerToInt64(pin_object, &pin));
-  HandleError(Dart_IntegerToInt64(pud_object, &pud));
-  pullUpDnControl(pin, pud);
+  Dart_Handle pin_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
+  Dart_Handle pud_obj = HandleError(Dart_GetNativeArgument(arguments, 2));
+  int64_t pin_num, pud;
+  HandleError(Dart_IntegerToInt64(pin_obj, &pin_num));
+  HandleError(Dart_IntegerToInt64(pud_obj, &pud));
+  pullUpDnControl(pin_num, pud);
   Dart_ExitScope();
 }
 
@@ -94,12 +94,12 @@ void pullUpDnControl (Dart_NativeArguments arguments) {
 // and the range is 0-1024.
 void pwmWrite(Dart_NativeArguments arguments) {
   Dart_EnterScope();
-  Dart_Handle pin_object = HandleError(Dart_GetNativeArgument(arguments, 1));
-  Dart_Handle pulseWidth_object = HandleError(Dart_GetNativeArgument(arguments, 2));
-  int64_t pin, pulseWidth;
-  HandleError(Dart_IntegerToInt64(pin_object, &pin));
-  HandleError(Dart_IntegerToInt64(pulseWidth_object, &pulseWidth));
-  pwmWrite(pin, pulseWidth);
+  Dart_Handle pin_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
+  Dart_Handle pulseWidth_obj = HandleError(Dart_GetNativeArgument(arguments, 2));
+  int64_t pin_num, pulseWidth;
+  HandleError(Dart_IntegerToInt64(pin_obj, &pin_num));
+  HandleError(Dart_IntegerToInt64(pulseWidth_obj, &pulseWidth));
+  pwmWrite(pin_num, pulseWidth);
   Dart_ExitScope();
 }
 

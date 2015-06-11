@@ -24,10 +24,10 @@ main() {
 class MockHardware implements GpioHardware {
 
   /// Simulate all pins return value of 1 (high).
-  int digitalRead(int pin) => 1;
+  int digitalRead(int pinNum) => 1;
 
   /// Called to set pin in input mode.
-  void pinMode(int pin, int mode) {}
+  void pinMode(int pinNum, int mode) {}
 
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

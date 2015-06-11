@@ -12,17 +12,17 @@ class RpiHardware implements GpioHardware {
   }
 
   @override
-  int digitalRead(int pin) native "digitalRead";
+  int digitalRead(int pinNum) native "digitalRead";
 
   @override
-  void digitalWrite(int pin, int value) native "digitalWrite";
+  void digitalWrite(int pinNum, int value) native "digitalWrite";
 
   @override
-  void pinMode(int pin, int mode) native "pinMode";
+  void pinMode(int pinNum, int mode) native "pinMode";
 
   @override
-  void pullUpDnControl(int pin, int pud) native "pullUpDnControl";
+  void pullUpDnControl(int pinNum, int pud) native "pullUpDnControl";
 
   @override
-  void pwmWrite(int pin, int pulseWidth) native "pwmWrite";
+  void pwmWrite(int pinNum, int pulseWidth) native "pwmWrite";
 }

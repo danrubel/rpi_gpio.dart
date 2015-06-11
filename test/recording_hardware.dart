@@ -96,11 +96,11 @@ class RecordingHardware implements GpioHardware {
 }
 
 class NoOpHardware extends GpioHardware {
-  @override int digitalRead(int pin) => 0;
-  @override void digitalWrite(int pin, int value) {}
-  @override void pinMode(int pin, int mode) {}
-  @override void pullUpDnControl(int pin, int pud) {}
-  @override void pwmWrite(int pin, int pulseWidth) {}
+  @override int digitalRead(int pinNum) => 0;
+  @override void digitalWrite(int pinNum, int value) {}
+  @override void pinMode(int pinNum, int mode) {}
+  @override void pullUpDnControl(int pinNum, int pud) {}
+  @override void pwmWrite(int pinNum, int pulseWidth) {}
 }
 
 /// Internal class for tracking the state of a pin
