@@ -85,18 +85,16 @@ main() async {
 
     // Test the pull up and pull down resistor settings
     // on a disconnected pin
-    test('pull up/down', () async {
+    test('pull up/down', () {
       var pin = gpio.pin(4, input);
       expect(pin.pull, pullOff);
       pin.pull = pullUp;
-      await _delay(1);
-      expect(pin.value, 1);
+      _assertValue(pin, 1);
       expect(pin.pull, pullUp);
       pin.pull = null;
       expect(pin.pull, pullOff);
       pin.pull = pullDown;
-      await _delay(1);
-      expect(pin.value, 0);
+      _assertValue(pin, 0);
       expect(pin.pull, pullDown);
       pin.pull = pullOff;
       expect(pin.pull, pullOff);
@@ -104,18 +102,15 @@ main() async {
 
     // This test assumes that output from wiringPi pin 1 (BMC_GPIO 18, Phys 12)
     // can be read as input on wiringPi pin 0 (BMC_GPIO 17, Phys 11).
-    test('digitalWrite and digitalRead', () async {
+    test('digitalWrite and digitalRead', () {
       Pin sensorPin = gpio.pin(0, input)..pull = pullDown;
       Pin ledPin = gpio.pin(1, output)..value = 0;
-      await _delay(1);
-      expect(sensorPin.value, 0);
+      _assertValue(sensorPin, 0);
       for (int count = 0; count < 3; ++count) {
         ledPin.value = 1;
-        await _delay(1);
-        expect(sensorPin.value, 1);
+        _assertValue(sensorPin, 1);
         ledPin.value = 0;
-        await _delay(1);
-        expect(sensorPin.value, 0);
+        _assertValue(sensorPin, 0);
       }
     });
 
@@ -127,8 +122,7 @@ main() async {
     test('pulseWidth and digitalRead - hardware pwm gpio.1', () async {
       Pin sensorPin = gpio.pin(0, input)..pull = pullDown;
       Pin ledPin = gpio.pin(1, pulsed)..pulseWidth = 0;
-      await _delay(1);
-      expect(sensorPin.value, 0);
+      _assertValue(sensorPin, 0);
 
       // Increase and note threshold at which pin 0 state changes
       int thresholdUp = await _pwmUp(ledPin, sensorPin);
@@ -148,8 +142,7 @@ main() async {
     test('pulseWidth and digitalRead - software pwm gpio.3', () async {
       Pin sensorPin = gpio.pin(2, input)..pull = pullDown;
       Pin ledPin = gpio.pin(3, pulsed)..pulseWidth = 0;
-      await _delay(5);
-      expect(sensorPin.value, 0);
+      _assertValue(sensorPin, 0);
 
       // Increase and note threshold at which pin 0 state changes
       int thresholdUp = await _pwmUp(ledPin, sensorPin);
@@ -167,6 +160,16 @@ main() async {
   });
 }
 
+DateTime get _now => new DateTime.now();
+
+_assertValue(Pin pin, int expectedValue) {
+  DateTime end = _now.add(new Duration(milliseconds: 250));
+  while (_now.isBefore(end)) {
+    if (pin.value == expectedValue) return;
+  }
+  fail('Expected $expectedValue on $pin');
+}
+
 Future _delay(int milliseconds) async {
   await new Future.delayed(new Duration(milliseconds: milliseconds));
 }
@@ -175,7 +178,7 @@ Future<int> _pwmDown(Pin ledPin, Pin sensorPin) async {
   int thresholdDown;
   for (int pulseWidth = 1024; pulseWidth >= 0; pulseWidth -= 10) {
     ledPin.pulseWidth = pulseWidth;
-    if (thresholdDown == null) await _delay(1);
+    if (thresholdDown == null) await _delay(5);
     int value = sensorPin.value;
     if (thresholdDown == null && value == 0) thresholdDown = pulseWidth;
   }
@@ -189,7 +192,7 @@ Future<int> _pwmUp(Pin ledPin, Pin sensorPin) async {
   int thresholdUp;
   for (int pulseWidth = 0; pulseWidth <= 1024; pulseWidth += 10) {
     ledPin.pulseWidth = pulseWidth;
-    if (thresholdUp == null) await _delay(1);
+    if (thresholdUp == null) await _delay(5);
     int value = sensorPin.value;
     if (thresholdUp == null && value == 1) thresholdUp = pulseWidth;
   }
