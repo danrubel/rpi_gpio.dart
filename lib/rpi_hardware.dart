@@ -1,5 +1,7 @@
 library rpi_hardware;
 
+import 'dart:isolate';
+
 import 'package:rpi_gpio/rpi_gpio.dart';
 
 import 'dart-ext:rpi_gpio_ext';
@@ -16,6 +18,12 @@ class RpiHardware implements GpioHardware {
 
   @override
   void digitalWrite(int pinNum, int value) native "digitalWrite";
+
+  @override
+  void enableInterrupt(int pinNum) native "enableInterrupt";
+
+  @override
+  void initInterrupts(SendPort port) native "initInterrupts";
 
   @override
   void pinMode(int pinNum, int mode) native "pinMode";

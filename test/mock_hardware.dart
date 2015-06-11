@@ -1,5 +1,7 @@
 library test.mock.hardware;
 
+import 'dart:isolate';
+
 import 'package:rpi_gpio/rpi_gpio.dart';
 
 /// Mock hardware used by rpi_gpio_test.dart for testing the [Gpio] library
@@ -12,6 +14,8 @@ import 'package:rpi_gpio/rpi_gpio.dart';
 class MockHardware implements GpioHardware {
   List<int> values;
   List<StateChange> stateChanges;
+  SendPort interruptEventPort;
+  List<bool> interruptMap;
 
   MockHardware() {
     reset();
@@ -28,22 +32,42 @@ class MockHardware implements GpioHardware {
   @override
   void digitalWrite(int pinNum, int value) {
     var digitalValue = value != 0 ? 1 : 0;
+    _write(int pinNum) {
+      if (values[pinNum] != digitalValue) {
+        values[pinNum] = digitalValue;
+        if (interruptMap[pinNum]) {
+          interruptEventPort.send(pinNum | (digitalValue * 0x80));
+        }
+      }
+    }
     stateChanges.add(new StateChange(now, pinNum, digitalValue));
     switch (pinNum) {
       case 1:
-        values[1] = digitalValue;
-        values[0] = digitalValue;
+        _write(1);
+        _write(0);
         break;
       case 3:
-        values[3] = digitalValue;
-        values[2] = digitalValue;
+        _write(3);
+        _write(2);
         break;
       case 4:
-        values[4] = digitalValue;
+        _write(4);
         break;
       default:
         throw 'write not mocked for pin $pinNum';
     }
+  }
+
+  @override
+  void enableInterrupt(int pinNum) {
+    if (interruptEventPort == null) throw 'must call initInterrupts';
+    interruptMap[pinNum] = true;
+  }
+
+  @override
+  void initInterrupts(SendPort port) {
+    if (interruptEventPort != null) throw 'interrupts already initialized';
+    interruptEventPort = port;
   }
 
   @override
@@ -76,6 +100,8 @@ class MockHardware implements GpioHardware {
   void reset() {
     values = <int>[0, 0, 0, 0, null];
     stateChanges = new List<StateChange>();
+    interruptEventPort = null;
+    interruptMap = <bool>[false, false, false, false, false];
   }
 }
 

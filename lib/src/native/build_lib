@@ -41,17 +41,22 @@ check_make_ok() {
   fi
 }
 
+echo building wiringPi
 make -j5
 check_make_ok
+echo installing wiringPi
 sudo make install
 check_make_ok
 
 ####################################################################
 # Build rpi_gpio native library
 
+echo building rpi_gpio
 cd $(dirname $0)
 g++ -fPIC -I$DARTSDK/ -c rpi_gpio_ext.cc
-gcc -shared -Wl,wiringPi/wiringPi.o,wiringPi/softPwm.o,wiringPi/softTone.o,-soname,librpi_gpio_ext.so -o librpi_gpio_ext.so rpi_gpio_ext.o
+LIBS=$(ls -dm wiringPi/*.o | tr -d ' ' | tr -d '\n')
+# use --no-undefined to check for missing libraries
+gcc -shared -lpthread -Wl,$LIBS,-soname,librpi_gpio_ext.so -o librpi_gpio_ext.so rpi_gpio_ext.o
 
 # Copy the library
 cp librpi_gpio_ext.so ../../librpi_gpio_ext.so

@@ -1,6 +1,18 @@
 library test.rpi_gpio.recording;
 
+import 'dart:isolate';
+
 import 'package:rpi_gpio/rpi_gpio.dart';
+
+class NoOpHardware extends GpioHardware {
+  @override int digitalRead(int pinNum) => 0;
+  @override void digitalWrite(int pinNum, int value) {}
+  @override void enableInterrupt(int pinNum) {}
+  @override void initInterrupts(SendPort port) {}
+  @override void pinMode(int pinNum, int mode) {}
+  @override void pullUpDnControl(int pinNum, int pud) {}
+  @override void pwmWrite(int pinNum, int pulseWidth) {}
+}
 
 /// Records modes used with the GPIO hardware,
 /// validates that the operation is appropriate for the current mode,
@@ -8,9 +20,14 @@ import 'package:rpi_gpio/rpi_gpio.dart';
 /// Usage can be displayed via [printUsage].
 class RecordingHardware implements GpioHardware {
   final GpioHardware _hardware;
+  ReceivePort _hardwarePort;
+  SendPort _clientPort;
 
   /// A sequence of pin mode changes.
   List<_PinState> _states = [];
+
+  /// A sequence of hardware events
+  List _events = [];
 
   RecordingHardware([GpioHardware hardware])
       : _hardware = hardware != null ? hardware : new NoOpHardware();
@@ -28,6 +45,24 @@ class RecordingHardware implements GpioHardware {
   }
 
   @override
+  void enableInterrupt(int pinNum) {
+    _hardware.enableInterrupt(pinNum);
+  }
+
+  @override
+  void initInterrupts(SendPort port) {
+    _clientPort = port;
+    _hardwarePort = new ReceivePort()
+      ..listen((message) {
+        int value = message >= 0x80 ? 1 : 0;
+        int pinNum = message & 0x7F;
+        _events.add('pin $pinNum value $value');
+        _clientPort.send(message);
+      });
+    _hardware.initInterrupts(_hardwarePort.sendPort);
+  }
+
+  @override
   void pinMode(int pinNum, int modeIndex) {
     var mode = PinMode.values[modeIndex];
     if (_mode(pinNum) != mode) _states.add(new _PinState(pinNum, mode));
@@ -36,6 +71,11 @@ class RecordingHardware implements GpioHardware {
 
   void printUsage(Gpio gpio) {
     var map = <int, Set<PinMode>>{};
+    print('');
+    print('Rev 2 GPIO hardware events');
+    for (var message in _events) {
+      print(' $message');
+    }
     print('');
     print('Rev 2 GPIO Pin mode changes');
     for (_PinState state in _states) {
@@ -93,14 +133,6 @@ class RecordingHardware implements GpioHardware {
     }
     return null;
   }
-}
-
-class NoOpHardware extends GpioHardware {
-  @override int digitalRead(int pinNum) => 0;
-  @override void digitalWrite(int pinNum, int value) {}
-  @override void pinMode(int pinNum, int mode) {}
-  @override void pullUpDnControl(int pinNum, int pud) {}
-  @override void pwmWrite(int pinNum, int pulseWidth) {}
 }
 
 /// Internal class for tracking the state of a pin

@@ -103,6 +103,112 @@ void pwmWrite(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+// ===== Interrupts ===============================================
+
+// Main interrupt handler
+void gpioInterrupt(int pin);
+
+// The port to which interrupt events are posted
+// or null if initInterrupts has not yet been called.
+static Dart_Port interruptEventPort = -1;
+
+// The maximum number of active interrupts
+static const int interruptToPinMax = 10;
+
+// A map of interrupt # to pin #
+// A value of -1 indicates an unused interrupt #
+static int interruptToPin[interruptToPinMax];
+
+// Interrupt handlers 0 through interruptToPinMax - 1
+void gpioInterrupt0 (void) { gpioInterrupt(interruptToPin[0]); }
+void gpioInterrupt1 (void) { gpioInterrupt(interruptToPin[1]); }
+void gpioInterrupt2 (void) { gpioInterrupt(interruptToPin[2]); }
+void gpioInterrupt3 (void) { gpioInterrupt(interruptToPin[3]); }
+void gpioInterrupt4 (void) { gpioInterrupt(interruptToPin[4]); }
+void gpioInterrupt5 (void) { gpioInterrupt(interruptToPin[5]); }
+void gpioInterrupt6 (void) { gpioInterrupt(interruptToPin[6]); }
+void gpioInterrupt7 (void) { gpioInterrupt(interruptToPin[7]); }
+void gpioInterrupt8 (void) { gpioInterrupt(interruptToPin[8]); }
+void gpioInterrupt9 (void) { gpioInterrupt(interruptToPin[9]); }
+
+void (*gpioInterruptMap[interruptToPinMax])() = {
+  gpioInterrupt0,
+  gpioInterrupt1,
+  gpioInterrupt2,
+  gpioInterrupt3,
+  gpioInterrupt4,
+  gpioInterrupt5,
+  gpioInterrupt6,
+  gpioInterrupt7,
+  gpioInterrupt8,
+  gpioInterrupt9,
+};
+
+// Main interrupt handler
+void gpioInterrupt(int pin_num) {
+  if (interruptEventPort != -1 && pin_num != -1) {
+    int value = digitalRead(pin_num);
+    Dart_CObject message;
+    message.type = Dart_CObject_kInt32;
+    message.value.as_int32 = pin_num | (value != 0 ? 0x80 : 0);
+    Dart_PostCObject(interruptEventPort, &message);
+  }
+}
+
+// Start a service that listens for interrupt configuration requests
+// and posts interrupt events to the given port.
+// \param SendPort the port to which interrupt events are posted
+void initInterrupts(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  if (interruptEventPort != -1) {
+    HandleError(Dart_NewApiError("interrupts already initialized"));
+  }
+  Dart_Handle port_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
+  HandleError(Dart_SendPortGetId(port_obj, &interruptEventPort));
+  for (int i = 0; i < interruptToPinMax; ++i) {
+    interruptToPin[i] = -1;
+  }
+  Dart_ExitScope();
+}
+
+// Enable interrupts for the given pin.
+// \param the number of the pin for which interrupts should be enabled.
+// TODO provide the ability to disable interrupts for a given pin.
+void enableInterrupt(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  Dart_Handle pin_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
+  int64_t pin_num;
+  HandleError(Dart_IntegerToInt64(pin_obj, &pin_num));
+  // Determine if this interrupt is already enabled
+  int interruptNum = -1;
+  for (int i = 0; i < interruptToPinMax; ++i) {
+    if (interruptToPin[i] == pin_num) {
+      interruptNum = i;
+      break;
+    }
+  }
+  // If not already enabled then find an unused interrupt
+  if (interruptNum == -1) {
+    for (int i = 0; i < interruptToPinMax; ++i) {
+      if (interruptToPin[i] == -1) {
+        interruptToPin[i] = pin_num;
+        interruptNum = i;
+        break;
+      }
+    }
+    if (interruptNum != -1) {
+      if (interruptEventPort == -1) {
+        HandleError(Dart_NewApiError("must call initInterrupts first"));
+      }
+      wiringPiISR(pin_num, INT_EDGE_BOTH, gpioInterruptMap[interruptNum]);
+    } else {
+      // If no unused interrupt slots, throw exception
+      HandleError(Dart_NewApiError("too many active interrupts"));
+    }
+  }
+  Dart_ExitScope();
+}
+
 // ===== Infrastructure methods ===============================================
 
 struct FunctionLookup {
@@ -116,6 +222,8 @@ FunctionLookup function_list[] = {
   {"pinMode", pinMode},
   {"pullUpDnControl", pullUpDnControl},
   {"pwmWrite", pwmWrite},
+  {"initInterrupts", initInterrupts},
+  {"enableInterrupt", enableInterrupt},
   {NULL, NULL}
 };
 
@@ -182,4 +290,3 @@ DART_EXPORT Dart_Handle rpi_gpio_ext_Init(Dart_Handle parent_library) {
   }
   return Dart_Null();
 }
-

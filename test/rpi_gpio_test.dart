@@ -115,6 +115,55 @@ main() async {
     });
 
     // This test assumes that output from wiringPi pin 1 (BMC_GPIO 18, Phys 12)
+    // can trigger an interrupt on wiringPi pin 0 (BMC_GPIO 17, Phys 11),
+    // and output from wiringPi pin 3 (BMC_GPIO 22, Phys 15)
+    // can be read as input on wiringPi pin 2  (BMC_GPIO 27, Phys 13).
+    test('interrupts', () async {
+      Pin sensorPin;
+      Pin ledPin;
+
+      testInterrupt() async {
+        _assertValue(sensorPin, 0);
+        var expectedSensorValue;
+        var completer;
+        var subscription = sensorPin.events.listen((PinEvent event) {
+          if (!identical(event.pin, sensorPin)) fail('expected sensor pin');
+          if (event.value == expectedSensorValue) completer.complete();
+        });
+
+        // When LED turns on, assert that a sensor pin interrupt occurred
+        // and that the sensor value is 1.
+        expectedSensorValue = 1;
+        var waitTime = new Duration(milliseconds: 100);
+        completer = new Completer();
+        var future = completer.future.timeout(waitTime).catchError((e) {
+          subscription.cancel();
+          throw e;
+        });
+        ledPin.value = 1;
+        await future;
+
+        // When LED turns off, assert that a sensor pin interrupt occurred
+        // and that the sensor value is 0.
+        expectedSensorValue = 0;
+        completer = new Completer();
+        future = completer.future.timeout(waitTime).whenComplete(() {
+          subscription.cancel();
+        });
+        ledPin.value = 0;
+        await future;
+      }
+
+      sensorPin = gpio.pin(0, input)..pull = pullDown;
+      ledPin = gpio.pin(1, output)..value = 0;
+      await testInterrupt();
+
+      sensorPin = gpio.pin(2, input)..pull = pullDown;
+      ledPin = gpio.pin(3, output)..value = 0;
+      await testInterrupt();
+    });
+
+    // This test assumes that output from wiringPi pin 1 (BMC_GPIO 18, Phys 12)
     // can be read as input on wiringPi pin 0 (BMC_GPIO 17, Phys 11).
     // In addition, it assumes that at some point when the pin 1 pulse width
     // reaches some threshold, the input for pin 0 will transition from
@@ -178,7 +227,7 @@ Future<int> _pwmDown(Pin ledPin, Pin sensorPin) async {
   int thresholdDown;
   for (int pulseWidth = 1024; pulseWidth >= 0; pulseWidth -= 10) {
     ledPin.pulseWidth = pulseWidth;
-    if (thresholdDown == null) await _delay(5);
+    if (thresholdDown == null) await _delay(25);
     int value = sensorPin.value;
     if (thresholdDown == null && value == 0) thresholdDown = pulseWidth;
   }
@@ -192,7 +241,7 @@ Future<int> _pwmUp(Pin ledPin, Pin sensorPin) async {
   int thresholdUp;
   for (int pulseWidth = 0; pulseWidth <= 1024; pulseWidth += 10) {
     ledPin.pulseWidth = pulseWidth;
-    if (thresholdUp == null) await _delay(5);
+    if (thresholdUp == null) await _delay(25);
     int value = sensorPin.value;
     if (thresholdUp == null && value == 1) thresholdUp = pulseWidth;
   }

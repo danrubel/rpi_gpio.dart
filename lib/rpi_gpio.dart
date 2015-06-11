@@ -1,6 +1,8 @@
 library rpi_gpio;
 
+import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:rpi_gpio/rpi_pwm.dart';
 
@@ -78,6 +80,10 @@ class Gpio {
   /// For emulating pulse width modulation on pins other than pin 1.
   SoftwarePWM _softPwm;
 
+  /// The port on which interrupt events are received
+  /// or `null` if not yet initialized.
+  ReceivePort _interruptEventPort;
+
   Gpio._() {
     if (_hardware == null) throw new GpioException._setHardware();
     _softPwm = new SoftwarePWM(_hardware);
@@ -97,6 +103,28 @@ class Gpio {
     }
     return pin;
   }
+
+  /// An event indicating the given pin's state has changed.
+  void _handleInterrupt(message) {
+    if (message is int) {
+      int value = message >= 0x80 ? 1 : 0;
+      int pinNum = message & 0x7F;
+      if (0 <= pinNum && pinNum < _pins.length) {
+        var pin = _pins[pinNum];
+        if (pin._events != null) {
+          pin._events.add(new PinEvent(pin, value));
+        }
+      }
+    }
+  }
+
+  /// Initialize interrupt handling if not already initialized
+  void _initInterrupts() {
+    if (_interruptEventPort == null) {
+      _interruptEventPort = new ReceivePort()..listen(_handleInterrupt);
+      _hardware.initInterrupts(_interruptEventPort.sendPort);
+    }
+  }
 }
 
 class GpioException {
@@ -109,6 +137,9 @@ class GpioException {
 
   GpioException._missingMode(this.pin)
       : message = 'Must specify initial pin mode';
+
+  GpioException._mustCancelEventSubscription(this.pin)
+      : message = 'Must cancel event stream subscription before changing mode';
 
   GpioException._selector(this.pin, String selector)
       : message = 'Invalid call: $selector for mode';
@@ -133,6 +164,18 @@ abstract class GpioHardware {
   /// 0 = low or ground, 1 = high or positive.
   /// The [pinMode] should be set to [output] before calling this method.
   void digitalWrite(int pinNum, int value);
+
+  /// Enable interrupts for the given pin.
+  /// Throws an exception if [initInterrupts] has not been called
+  /// or if there cannot be any more active interrupts.
+  /// The [pinMode] should be set to [input] before calling this method.
+  /// TODO provide the ability to disable interrupts for a given pin.
+  void enableInterrupt(int pinNum);
+
+  /// Initialize the background interrupt listener.
+  /// Once called, interrupt events will be sent to [port].
+  /// Throws an exception if interrupts have already been initialized.
+  void initInterrupts(SendPort port);
 
   /// Set the given pin to the specified mode,
   /// which can be any of [PinMode] (e.g. [PinMode.input.index]).
@@ -163,6 +206,9 @@ class Pin {
   /// The state of the pin's pull up/down resistor
   PinPull _pull = pullOff;
 
+  /// The event stream controller or null if none.
+  StreamController<PinEvent> _events;
+
   Pin._(this.pinNum, PinMode mode) {
     this.mode = mode;
   }
@@ -172,6 +218,24 @@ class Pin {
       ? _pinDescriptions[pinNum]
       : 'Pin $pinNum';
 
+  /// Return a stream of pin events indicating state changes.
+  Stream<PinEvent> get events {
+    if (_events == null) {
+      _events = new StreamController(onListen: () {
+        if (_mode != input) {
+          _events.addError(new GpioException._selector(this, 'events.listen'));
+          return;
+        }
+        Gpio._instance._initInterrupts();
+        Gpio._hardware.enableInterrupt(pinNum);
+      }, onCancel: () {
+        _events.close();
+        _events = null;
+      });
+    }
+    return _events.stream;
+  }
+
   /// Return the mode ([input], [output], [pulsed]) for this pin.
   PinMode get mode => _mode;
 
@@ -180,6 +244,9 @@ class Pin {
     if (_mode == pulsed && mode != pulsed) {
       // Turn off software simulated pwm
       Gpio._instance._softPwm.pulseWidth(pinNum, null);
+    }
+    if (_mode == input && mode != input && _events != null) {
+      throw new GpioException._mustCancelEventSubscription(this);
     }
     _mode = mode;
     if (pinNum != 1 && mode == pulsed) {
@@ -229,6 +296,18 @@ class Pin {
 
   @override
   String toString() => '$description $mode';
+}
+
+/// An event indicating that a pin has changed state.
+class PinEvent {
+
+  /// The pin that changed state.
+  final Pin pin;
+
+  /// The new value for the pin.
+  final int value;
+
+  PinEvent(this.pin, this.value);
 }
 
 /// A pin can be set to receive [input] and interrupts, have a particular
