@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:isolate';
 
 import 'package:rpi_gpio/rpi_gpio.dart';
 import 'package:rpi_gpio/rpi_hardware.dart' deferred as rpi;
@@ -16,24 +17,22 @@ main() {
   var stopwatch = new Stopwatch()..start();
 
   var gpio = Gpio.instance;
-  var sensors = [];
+  var subscriptions = [];
   for (int pinNum = 0; pinNum < 8; ++pinNum) {
-    var sensor = new Sensor(gpio.pin(pinNum, input));
-    sensors.add(sensor);
-    print(sensor);
+    var pin = gpio.pin(pinNum, input);
+    subscriptions.add(pin.events.listen((PinEvent event) {
+      print('${stopwatch.elapsedMilliseconds}, '
+          '${MockHardware.elapsedMillisecondsSinceTrigger} : '
+          '${event.value} => ${event.pin}');
+    }));
+    print('${pin.value} => ${pin}');
   }
 
-  print('=== polling for changes');
-  int count = 0;
-  new Timer.periodic(new Duration(milliseconds: 5), (Timer timer) {
-    sensors.forEach((Sensor sensor) {
-      if (sensor.hasChanged()) {
-        print('${stopwatch.elapsedMilliseconds}, '
-            '${MockHardware.elapsedMillisecondsSinceTrigger} : $sensor');
-      }
-    });
-    ++count;
-    if (count >= 20) timer.cancel();
+  print('=== wait for changes');
+  new Timer(new Duration(milliseconds: 100), () {
+    for (var s in subscriptions) {
+      s.cancel();
+    }
   });
 }
 
@@ -48,6 +47,8 @@ class MockHardware implements GpioHardware {
 
   List<int> values = [0, 0, 0, 0, 0, 0, 0, 0];
 
+  SendPort interruptPort;
+
   MockHardware() {
     new Timer(new Duration(milliseconds: 17), () => _changed(3, 1));
     new Timer(new Duration(milliseconds: 24), () => _changed(1, 1));
@@ -57,6 +58,14 @@ class MockHardware implements GpioHardware {
 
   int digitalRead(int pinNum) => values[pinNum];
 
+  @override
+  int enableInterrupt(int pinNum) => -1;
+
+  @override
+  void initInterrupts(SendPort port) {
+    interruptPort = port;
+  }
+
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 
   void pinMode(int pinNum, int mode) {}
@@ -64,25 +73,7 @@ class MockHardware implements GpioHardware {
   int _changed(int pinNum, int value) {
     values[pinNum] = value;
     triggerTime = now;
+    interruptPort.send(pinNum | (value != 0 ? 0x80 : 0));
     return value;
   }
-}
-
-/// Encapsulate a pin with its most recent value
-class Sensor {
-  final Pin pin;
-  int value;
-
-  Sensor(this.pin) {
-    value = pin.value;
-  }
-
-  /// Check if the sensor value has changed
-  bool hasChanged() {
-    var oldValue = value;
-    value = pin.value;
-    return value != oldValue;
-  }
-
-  toString() => '${value} => ${pin.description}';
 }
