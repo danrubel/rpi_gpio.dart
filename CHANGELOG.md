@@ -6,6 +6,7 @@
  * Hardware pulse width modulation on pin 1
  * Software simulated pwm for other pins (work in progress)
 
-## 0.2.0
+## 0.2.0 (alpha)
 
  * Rename pin to pinNum
+ * Improve build native library script

@@ -47,3 +47,5 @@ to compile the native librpi_gpio_ext.so library for the rpi_gpio package.
  * A second [blinking LED](example/blink_sample_hardware_api.dart)
    demonstrates using the [low level hardware API](lib/rpi_hardware.dart).
 
+ * The value of GPIO pins can be tracked over time
+   via [polling](example/polling.dart) or [interrupts](example/interrupts.dart)
