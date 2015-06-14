@@ -8,5 +8,6 @@
 
 ## 0.2.0 (alpha)
 
+ * Support for interrupts via Pin.events
  * Rename pin to pinNum
  * Improve build native library script
