@@ -170,7 +170,7 @@ abstract class GpioHardware {
   /// or if there cannot be any more active interrupts.
   /// The [pinMode] should be set to [input] before calling this method.
   /// TODO provide the ability to disable interrupts for a given pin.
-  void enableInterrupt(int pinNum);
+  int enableInterrupt(int pinNum);
 
   /// Initialize the background interrupt listener.
   /// Once called, interrupt events will be sent to [port].

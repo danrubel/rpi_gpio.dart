@@ -7,7 +7,7 @@ import 'package:rpi_gpio/rpi_gpio.dart';
 class NoOpHardware extends GpioHardware {
   @override int digitalRead(int pinNum) => 0;
   @override void digitalWrite(int pinNum, int value) {}
-  @override void enableInterrupt(int pinNum) {}
+  @override int enableInterrupt(int pinNum) => -1;
   @override void initInterrupts(SendPort port) {}
   @override void pinMode(int pinNum, int mode) {}
   @override void pullUpDnControl(int pinNum, int pud) {}
@@ -45,9 +45,7 @@ class RecordingHardware implements GpioHardware {
   }
 
   @override
-  void enableInterrupt(int pinNum) {
-    _hardware.enableInterrupt(pinNum);
-  }
+  int enableInterrupt(int pinNum) => _hardware.enableInterrupt(pinNum);
 
   @override
   void initInterrupts(SendPort port) {

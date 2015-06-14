@@ -59,9 +59,10 @@ class MockHardware implements GpioHardware {
   }
 
   @override
-  void enableInterrupt(int pinNum) {
+  int enableInterrupt(int pinNum) {
     if (interruptEventPort == null) throw 'must call initInterrupts';
     interruptMap[pinNum] = true;
+    return -1;
   }
 
   @override

@@ -206,6 +206,8 @@ void enableInterrupt(Dart_NativeArguments arguments) {
       HandleError(Dart_NewApiError("too many active interrupts"));
     }
   }
+  Dart_Handle result = HandleError(Dart_NewInteger(interruptNum));
+  Dart_SetReturnValue(arguments, result);
   Dart_ExitScope();
 }
 

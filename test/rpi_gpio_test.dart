@@ -103,15 +103,26 @@ main() async {
     // This test assumes that output from wiringPi pin 1 (BMC_GPIO 18, Phys 12)
     // can be read as input on wiringPi pin 0 (BMC_GPIO 17, Phys 11).
     test('digitalWrite and digitalRead', () {
-      Pin sensorPin = gpio.pin(0, input)..pull = pullDown;
-      Pin ledPin = gpio.pin(1, output)..value = 0;
-      _assertValue(sensorPin, 0);
-      for (int count = 0; count < 3; ++count) {
-        ledPin.value = 1;
-        _assertValue(sensorPin, 1);
-        ledPin.value = 0;
+      Pin sensorPin;
+      Pin ledPin;
+
+      testWriteRead() {
         _assertValue(sensorPin, 0);
+        for (int count = 0; count < 3; ++count) {
+          ledPin.value = 1;
+          _assertValue(sensorPin, 1);
+          ledPin.value = 0;
+          _assertValue(sensorPin, 0);
+        }
       }
+
+      sensorPin = gpio.pin(0, input)..pull = pullDown;
+      ledPin = gpio.pin(1, output)..value = 0;
+      testWriteRead();
+
+      sensorPin = gpio.pin(2, input)..pull = pullDown;
+      ledPin = gpio.pin(3, output)..value = 0;
+      testWriteRead();
     });
 
     // This test assumes that output from wiringPi pin 1 (BMC_GPIO 18, Phys 12)
@@ -138,7 +149,7 @@ main() async {
         completer = new Completer();
         var future = completer.future.timeout(waitTime).catchError((e) {
           subscription.cancel();
-          throw e;
+          throw 'Expected value $expectedSensorValue on $sensorPin\n$e';
         });
         ledPin.value = 1;
         await future;
@@ -147,7 +158,10 @@ main() async {
         // and that the sensor value is 0.
         expectedSensorValue = 0;
         completer = new Completer();
-        future = completer.future.timeout(waitTime).whenComplete(() {
+        future = completer.future.timeout(waitTime).catchError((e) {
+          subscription.cancel();
+          throw 'Expected value $expectedSensorValue on $sensorPin\n$e';
+        }).whenComplete(() {
           subscription.cancel();
         });
         ledPin.value = 0;
