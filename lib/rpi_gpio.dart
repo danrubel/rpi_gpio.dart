@@ -107,8 +107,8 @@ class Gpio {
   /// An event indicating the given pin's state has changed.
   void _handleInterrupt(message) {
     if (message is int) {
-      int value = message >= 0x80 ? 1 : 0;
-      int pinNum = message & 0x7F;
+      int value = (message & GpioHardware.pinValueMask) != 0 ? 1 : 0;
+      int pinNum = message & GpioHardware.pinNumMask;
       if (0 <= pinNum && pinNum < _pins.length) {
         var pin = _pins[pinNum];
         if (pin._events != null) {
@@ -154,6 +154,8 @@ class GpioException {
 
 /// API used by [Gpio] for accessing the underlying hardware.
 abstract class GpioHardware {
+  static final pinNumMask = 0x7F;
+  static final pinValueMask = 0x80;
 
   /// Return the value for the given pin.
   /// 0 = low or ground, 1 = high or positive.
@@ -174,6 +176,14 @@ abstract class GpioHardware {
 
   /// Initialize the background interrupt listener.
   /// Once called, interrupt events will be sent to [port].
+  /// Each message is an int indicating the pin on which the interrupt occurred
+  /// and the value of that pin at the time of the interrupt:
+  ///
+  ///     int message = pinNum | (pinValue != 0 ? GpioHardware.pinValueMask : 0);
+  ///
+  ///     int pinNum = message & GpioHardware.pinNumMask;
+  ///     int pinValue = (message & GpioHardware.pinValueMask) != 0 ? 1 : 0;
+  ///
   /// Throws an exception if interrupts have already been initialized.
   void initInterrupts(SendPort port);
 

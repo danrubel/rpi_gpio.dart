@@ -36,7 +36,8 @@ class MockHardware implements GpioHardware {
       if (values[pinNum] != digitalValue) {
         values[pinNum] = digitalValue;
         if (interruptMap[pinNum]) {
-          interruptEventPort.send(pinNum | (digitalValue * 0x80));
+          interruptEventPort.send(
+              pinNum | (digitalValue != 0 ? GpioHardware.pinValueMask : 0));
         }
       }
     }

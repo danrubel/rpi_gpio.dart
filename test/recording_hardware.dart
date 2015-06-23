@@ -52,9 +52,9 @@ class RecordingHardware implements GpioHardware {
     _clientPort = port;
     _hardwarePort = new ReceivePort()
       ..listen((message) {
-        int value = message >= 0x80 ? 1 : 0;
-        int pinNum = message & 0x7F;
-        _events.add('pin $pinNum value $value');
+        int pinNum = message & GpioHardware.pinNumMask;
+        int pinValue = (message & GpioHardware.pinValueMask) != 0 ? 1 : 0;
+        _events.add('pin $pinNum value $pinValue');
         _clientPort.send(message);
       });
     _hardware.initInterrupts(_hardwarePort.sendPort);

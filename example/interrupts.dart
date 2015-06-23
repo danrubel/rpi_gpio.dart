@@ -73,7 +73,7 @@ class MockHardware implements GpioHardware {
   int _changed(int pinNum, int value) {
     values[pinNum] = value;
     triggerTime = now;
-    interruptPort.send(pinNum | (value != 0 ? 0x80 : 0));
+    interruptPort.send(pinNum | (value != 0 ? GpioHardware.pinValueMask : 0));
     return value;
   }
 }
