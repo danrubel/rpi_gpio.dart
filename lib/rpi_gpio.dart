@@ -104,16 +104,13 @@ class Gpio {
     return pin;
   }
 
-  /// An event indicating the given pin's state has changed.
+  /// Called when a pin's state has changed.
   void _handleInterrupt(message) {
     if (message is int) {
-      int value = (message & GpioHardware.pinValueMask) != 0 ? 1 : 0;
       int pinNum = message & GpioHardware.pinNumMask;
       if (0 <= pinNum && pinNum < _pins.length) {
-        var pin = _pins[pinNum];
-        if (pin._events != null) {
-          pin._events.add(new PinEvent(pin, value));
-        }
+        int value = (message & GpioHardware.pinValueMask) != 0 ? 1 : 0;
+        _pins[pinNum]._handleInterrupt(value);
       }
     }
   }
@@ -219,6 +216,10 @@ class Pin {
   /// The event stream controller or null if none.
   StreamController<PinEvent> _events;
 
+  /// The pin's value at the time of the last interrupt.
+  /// This is used to filter duplicate interrupts.
+  int _lastInterruptValue;
+
   Pin._(this.pinNum, PinMode mode) {
     this.mode = mode;
   }
@@ -238,6 +239,7 @@ class Pin {
         }
         Gpio._instance._initInterrupts();
         Gpio._hardware.enableInterrupt(pinNum);
+        _lastInterruptValue = value;
       }, onCancel: () {
         _events.close();
         _events = null;
@@ -306,6 +308,15 @@ class Pin {
 
   @override
   String toString() => '$description $mode';
+
+  /// Called when this pin's state has changed.
+  /// Forward the event to listeners after filtering duplicate interrupts.
+  void _handleInterrupt(int newValue) {
+    if (_events != null && _lastInterruptValue != newValue) {
+      _lastInterruptValue = newValue;
+      _events.add(new PinEvent(this, newValue));
+    }
+  }
 }
 
 /// An event indicating that a pin has changed state.
