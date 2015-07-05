@@ -1,15 +1,126 @@
-#include <string.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "wiringPi/wiringPi.h"
+#include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include "include/dart_api.h"
 #include "include/dart_native_api.h"
+#include "wiringPi/wiringPi.h"
 
 Dart_Handle HandleError(Dart_Handle handle) {
   if (Dart_IsError(handle)) {
     Dart_PropagateError(handle);
   }
   return handle;
+}
+
+// ===== gpio.c ===============================================================
+// The wiringPiISR method calls the global gpio method to configure interrupts.
+// Rather than requiring the user to separately install the gpio utility,
+// the interrupt configuration methods in gpio.c are copied here and called
+// directly.
+
+/*
+ * changeOwner:
+ *  >>> copied and modified from the wiringPi gpio global utility <<<
+ *  Change the ownership of the file to the real userId of the calling
+ *  program so we can access it.
+ *********************************************************************************
+ */
+
+static void changeOwner (char *file)
+{
+  uid_t uid = getuid () ;
+  uid_t gid = getgid () ;
+
+  if (chown (file, uid, gid) != 0)
+  {
+    if (errno == ENOENT)  // Warn that it's not there
+    {
+      //fprintf (stderr, "%s: Warning: File not present: %s\n", cmd, file) ;
+    }
+    else
+    {
+      //fprintf (stderr, "%s: Unable to change ownership of %s: %s\n", cmd, file, strerror (errno)) ;
+      //exit (1) ;
+      HandleError(Dart_NewApiError("Unable to change file ownership"));
+    }
+  }
+}
+
+/*
+ * doEdge:
+ *  >>> copied and modified from the wiringPi gpio global utility <<<
+ *  Easy access to changing the edge trigger on a GPIO pin
+ *  This uses the /sys/class/gpio device interface.
+ *********************************************************************************
+ */
+
+void doEdge (int gpio_pin_num, int edge)
+{
+  FILE *fd ;
+  char fName [128] ;
+
+  // Export the GPIO pin via the special "export" file
+  // See https://www.kernel.org/doc/Documentation/gpio/sysfs.txt
+
+  if ((fd = fopen ("/sys/class/gpio/export", "w")) == NULL)
+  {
+    //fprintf (stderr, "%s: Unable to open GPIO export interface: %s\n", argv [0], strerror (errno)) ;
+    //exit (1) ;
+    HandleError(Dart_NewApiError("Unable to open GPIO export interface"));
+  }
+
+  fprintf (fd, "%d\n", gpio_pin_num) ;
+  fclose (fd) ;
+
+  // Set the direction of the GPIO pin to input via the special "direction" file
+  // See https://www.kernel.org/doc/Documentation/gpio/sysfs.txt
+
+  sprintf (fName, "/sys/class/gpio/gpio%d/direction", gpio_pin_num) ;
+  if ((fd = fopen (fName, "w")) == NULL)
+  {
+    //fprintf (stderr, "%s: Unable to open GPIO direction interface for pin %d: %s\n", argv [0], pin, strerror (errno)) ;
+    //exit (1) ;
+    HandleError(Dart_NewApiError("Unable to open GPIO direction interface"));
+  }
+
+  fprintf (fd, "in\n") ;
+  fclose (fd) ;
+
+  // Set the interrupt state of the GPIO pin via the special "edge" file
+  // See https://www.kernel.org/doc/Documentation/gpio/sysfs.txt
+
+  sprintf (fName, "/sys/class/gpio/gpio%d/edge", gpio_pin_num) ;
+  if ((fd = fopen (fName, "w")) == NULL)
+  {
+    //fprintf (stderr, "%s: Unable to open GPIO edge interface for pin %d: %s\n", argv [0], pin, strerror (errno)) ;
+    //exit (1) ;
+    HandleError(Dart_NewApiError("Unable to open GPIO edge interface"));
+  }
+
+  //// if (strcasecmp (mode, "none")    == 0) fprintf (fd, "none\n") ; else
+  /**/ if (edge = INT_EDGE_RISING)  fprintf (fd, "rising\n") ;
+  else if (edge = INT_EDGE_FALLING) fprintf (fd, "falling\n") ;
+  else if (edge = INT_EDGE_BOTH)    fprintf (fd, "both\n") ;
+  else
+  {
+    //fprintf (stderr, "%s: Invalid mode: %s. Should be none, rising, falling or both\n", argv [1], mode) ;
+    //exit (1) ;
+    fclose (fd) ;
+    HandleError(Dart_NewApiError("Invalid edge mode specified"));
+  }
+
+  // Change ownership of the value and edge files, so the current user can actually use it!
+
+  sprintf (fName, "/sys/class/gpio/gpio%d/value", gpio_pin_num) ;
+  changeOwner (fName) ;
+
+  sprintf (fName, "/sys/class/gpio/gpio%d/edge", gpio_pin_num) ;
+  changeOwner (fName) ;
+
+  fclose (fd) ;
 }
 
 // Native library connecting rpi_gpio.dart to the wiringPi library
@@ -200,7 +311,18 @@ void enableInterrupt(Dart_NativeArguments arguments) {
       if (interruptEventPort == -1) {
         HandleError(Dart_NewApiError("must call initInterrupts first"));
       }
-      wiringPiISR(pin_num, INT_EDGE_BOTH, gpioInterruptMap[interruptNum]);
+      // This is the method we would call,
+      // but calling wiringPiISR with any value other than INT_EDGE_SETUP
+      // requires the global gpio utility to be installed.
+      //wiringPiISR(pin_num, INT_EDGE_BOTH, gpioInterruptMap[interruptNum]);
+
+      // Instead, call doEdge which is inlined from the gpio.c
+      // global utility which is part of the wiringPi library,
+      // and then call wiringPiISR with INT_EDGE_SETUP
+      int gpio_pin_num = wpiPinToGpio(pin_num);
+      doEdge(gpio_pin_num, INT_EDGE_BOTH);
+      wiringPiISR(pin_num, INT_EDGE_SETUP, gpioInterruptMap[interruptNum]);
+
     } else {
       // If no unused interrupt slots, throw exception
       HandleError(Dart_NewApiError("too many active interrupts"));

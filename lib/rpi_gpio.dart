@@ -318,6 +318,9 @@ class PinEvent {
   final int value;
 
   PinEvent(this.pin, this.value);
+
+  @override
+  toString() => '$pin value: $value';
 }
 
 /// A pin can be set to receive [input] and interrupts, have a particular
