@@ -218,6 +218,10 @@ main() async {
     });
 
     test('pins used', () {
+      // Ensure LEDs are off
+      gpio.pin(1, output)..value = 0;
+      gpio.pin(3, output)..value = 0;
+      // Print pin state changes
       if (recording != null) recording.printUsage(gpio);
     });
   });
