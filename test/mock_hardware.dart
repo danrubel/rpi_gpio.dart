@@ -4,7 +4,9 @@ import 'dart:isolate';
 
 import 'package:rpi_gpio/rpi_gpio.dart';
 
-/// Mock hardware used by rpi_gpio_test.dart for testing the [Gpio] library
+import 'test_util.dart';
+
+/// Mock hardware used for testing the [Gpio] library
 /// on platforms other than the Raspberry Pi. This simulates
 /// pin 4 unconnected but with an internal pull up/down resistor setting
 /// pin 3 = an LED (1 = on, 0 = off)
@@ -20,8 +22,6 @@ class MockHardware implements GpioHardware {
   MockHardware() {
     reset();
   }
-
-  DateTime get now => new DateTime.now();
 
   @override
   int digitalRead(int pinNum) {

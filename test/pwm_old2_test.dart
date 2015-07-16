@@ -10,7 +10,7 @@ import 'mock_hardware.dart';
 main() {
   group('SoftwarePWM', () {
 
-    // Mock hardware used by rpi_gpio_test.dart for testing the [Gpio] library
+    // Mock hardware used by pwm_old1_test.dart for testing the [Gpio] library
     // on platforms other than the Raspberry Pi. This simulates
     // pin 3 = an LED (1 = on, 0 = off)
     // pin 2 = a photo resistor detecting the state of the LED on pin 3

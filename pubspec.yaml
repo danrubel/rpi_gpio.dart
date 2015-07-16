@@ -8,4 +8,4 @@ environment:
 dependencies:
   path: '>=1.0.0 <2.0.0'
 dev_dependencies:
-  unittest: '>=0.11.4 <0.12.0'
+  test: '>=0.12.0 <0.13.0'
