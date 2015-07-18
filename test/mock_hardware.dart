@@ -60,6 +60,12 @@ class MockHardware implements GpioHardware {
   }
 
   @override
+  void disableAllInterrupts() {
+    interruptEventPort = null;
+    interruptMap = <bool>[false, false, false, false, false];
+  }
+
+  @override
   int enableInterrupt(int pinNum) {
     if (interruptEventPort == null) throw 'must call initInterrupts';
     interruptMap[pinNum] = true;
@@ -102,8 +108,7 @@ class MockHardware implements GpioHardware {
   void reset() {
     values = <int>[0, 0, 0, 0, null];
     stateChanges = new List<StateChange>();
-    interruptEventPort = null;
-    interruptMap = <bool>[false, false, false, false, false];
+    disableAllInterrupts();
   }
 }
 

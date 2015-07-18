@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.2.0 (alpha)
+## 0.2.1
+
+ * fix bug that prevented application from completing normally when interrupts were used
+ * switch tests to use package:test rather than package:unittest
+
+## 0.2.0
 
  * Support for interrupts via Pin.events
  * Rename pin to pinNum

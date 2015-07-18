@@ -21,6 +21,9 @@ Dart_Handle HandleError(Dart_Handle handle) {
 // the interrupt configuration methods in gpio.c are copied here and called
 // directly.
 
+// New const for turning off interrupts
+#define	INT_EDGE_OFF  -1
+
 /*
  * changeOwner:
  *  >>> copied and modified from the wiringPi gpio global utility <<<
@@ -100,8 +103,8 @@ void doEdge (int gpio_pin_num, int edge)
     HandleError(Dart_NewApiError("Unable to open GPIO edge interface"));
   }
 
-  //// if (strcasecmp (mode, "none")    == 0) fprintf (fd, "none\n") ; else
-  /**/ if (edge = INT_EDGE_RISING)  fprintf (fd, "rising\n") ;
+  /**/ if (edge = INT_EDGE_OFF)     fprintf (fd, "none\n") ;
+  else if (edge = INT_EDGE_RISING)  fprintf (fd, "rising\n") ;
   else if (edge = INT_EDGE_FALLING) fprintf (fd, "falling\n") ;
   else if (edge = INT_EDGE_BOTH)    fprintf (fd, "both\n") ;
   else
@@ -266,7 +269,7 @@ void gpioInterrupt(int pin_num) {
   }
 }
 
-// Start a service that listens for interrupt configuration requests
+// Start the service that listens for interrupt configuration requests
 // and posts interrupt events to the given port.
 // \param SendPort the port to which interrupt events are posted
 void initInterrupts(Dart_NativeArguments arguments) {
@@ -276,9 +279,6 @@ void initInterrupts(Dart_NativeArguments arguments) {
   }
   Dart_Handle port_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
   HandleError(Dart_SendPortGetId(port_obj, &interruptEventPort));
-  for (int i = 0; i < interruptToPinMax; ++i) {
-    interruptToPin[i] = -1;
-  }
   Dart_ExitScope();
 }
 
@@ -333,6 +333,14 @@ void enableInterrupt(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+// Stop the service that forwards interrupts.
+void disableAllInterrupts(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  interruptEventPort = -1;
+  // TODO turn off interrupts at the hardware level
+  Dart_ExitScope();
+}
+
 // ===== Infrastructure methods ===============================================
 
 struct FunctionLookup {
@@ -343,11 +351,12 @@ struct FunctionLookup {
 FunctionLookup function_list[] = {
   {"digitalRead", digitalRead},
   {"digitalWrite", digitalWrite},
+  {"disableAllInterrupts", disableAllInterrupts},
+  {"enableInterrupt", enableInterrupt},
+  {"initInterrupts", initInterrupts},
   {"pinMode", pinMode},
   {"pullUpDnControl", pullUpDnControl},
   {"pwmWrite", pwmWrite},
-  {"initInterrupts", initInterrupts},
-  {"enableInterrupt", enableInterrupt},
   {NULL, NULL}
 };
 
@@ -407,6 +416,10 @@ DART_EXPORT Dart_Handle rpi_gpio_ext_Init(Dart_Handle parent_library) {
       Dart_SetNativeResolver(parent_library, ResolveName, NULL);
   if (Dart_IsError(result_code)) {
     return result_code;
+  }
+  // Initialize the interrupt forwarding table
+  for (int i = 0; i < interruptToPinMax; ++i) {
+    interruptToPin[i] = -1;
   }
   result_code = rpi_gpio_wiringPi_init();
   if (Dart_IsError(result_code)) {

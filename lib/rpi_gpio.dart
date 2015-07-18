@@ -104,6 +104,20 @@ class Gpio {
     return pin;
   }
 
+  /// If all pin event streams have been canceled/closed
+  /// then call the underlying disableAllInterrupts method
+  /// to stop forwarding interrupts.
+  void _checkDisableAllInterrupts() {
+    for (int pinNum = 0; pinNum < _pins.length; ++pinNum) {
+      if (_pins[pinNum]._events != null) {
+        return;
+      }
+    }
+    _hardware.disableAllInterrupts();
+    _interruptEventPort.close();
+    _interruptEventPort = null;
+  }
+
   /// Called when a pin's state has changed.
   void _handleInterrupt(message) {
     if (message is int) {
@@ -163,6 +177,9 @@ abstract class GpioHardware {
   /// 0 = low or ground, 1 = high or positive.
   /// The [pinMode] should be set to [output] before calling this method.
   void digitalWrite(int pinNum, int value);
+
+  /// Disable the background interrupt listener.
+  void disableAllInterrupts();
 
   /// Enable interrupts for the given pin.
   /// Throws an exception if [initInterrupts] has not been called
@@ -243,6 +260,7 @@ class Pin {
       }, onCancel: () {
         _events.close();
         _events = null;
+        Gpio._instance._checkDisableAllInterrupts();
       });
     }
     return _events.stream;
