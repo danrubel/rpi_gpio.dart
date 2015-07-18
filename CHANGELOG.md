@@ -5,6 +5,8 @@
  * fix bug to track both rising and falling interrupt edge
  * fix bug that prevented application from completing normally when interrupts were used
  * switch tests to use package:test rather than package:unittest
+ * fix [read](example/read.dart), [polling](example/polling.dart), and [interrupts](example/interrupts.dart) examples
+   to wait for rpi.loadLibrary() before proceeding.
 
 ## 0.2.0
 
