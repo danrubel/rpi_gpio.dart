@@ -28,16 +28,11 @@ assertValue(Pin pin, int expectedValue) {
 
 /// Setup hardware for testing
 Future<GpioHardware> setupHardware() async {
-  if (recording != null) return recording;
-
   // Load the Raspberry Pi native method library if running on the RPi
   // otherwise create mock hardware for testing code on other platforms.
-  if (isRaspberryPi) {
-    await rpi.loadLibrary();
-    hardware = new rpi.RpiHardware();
-  } else {
-    hardware = new MockHardware();
-  }
+  if (isRaspberryPi) await rpi.loadLibrary();
+  if (recording != null) return recording;
+  hardware = isRaspberryPi ? new rpi.RpiHardware() : new MockHardware();
 
   // Wrap the low level or mock hardware to record, validate, and display
   // which pins are used and for what purpose.
