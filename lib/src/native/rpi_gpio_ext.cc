@@ -22,7 +22,7 @@ Dart_Handle HandleError(Dart_Handle handle) {
 // directly.
 
 // New const for turning off interrupts
-#define	INT_EDGE_OFF  -1
+#define	INT_EDGE_NONE  -1
 
 /*
  * changeOwner:
@@ -103,10 +103,10 @@ void doEdge (int gpio_pin_num, int edge)
     HandleError(Dart_NewApiError("Unable to open GPIO edge interface"));
   }
 
-  /**/ if (edge = INT_EDGE_OFF)     fprintf (fd, "none\n") ;
-  else if (edge = INT_EDGE_RISING)  fprintf (fd, "rising\n") ;
-  else if (edge = INT_EDGE_FALLING) fprintf (fd, "falling\n") ;
-  else if (edge = INT_EDGE_BOTH)    fprintf (fd, "both\n") ;
+  /**/ if (edge == INT_EDGE_NONE)    fprintf (fd, "none\n") ;
+  else if (edge == INT_EDGE_RISING)  fprintf (fd, "rising\n") ;
+  else if (edge == INT_EDGE_FALLING) fprintf (fd, "falling\n") ;
+  else if (edge == INT_EDGE_BOTH)    fprintf (fd, "both\n") ;
   else
   {
     //fprintf (stderr, "%s: Invalid mode: %s. Should be none, rising, falling or both\n", argv [1], mode) ;

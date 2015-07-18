@@ -2,6 +2,7 @@
 
 ## 0.2.1
 
+ * fix bug to track both rising and falling interrupt edge
  * fix bug that prevented application from completing normally when interrupts were used
  * switch tests to use package:test rather than package:unittest
 
