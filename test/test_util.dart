@@ -4,7 +4,7 @@ import 'dart:async';
 
 import 'package:rpi_gpio/rpi_gpio.dart';
 import 'package:rpi_gpio/rpi_hardware.dart' deferred as rpi;
-import 'package:unittest/unittest.dart';
+import 'package:test/test.dart';
 
 import 'mock_hardware.dart';
 import 'recording_hardware.dart';

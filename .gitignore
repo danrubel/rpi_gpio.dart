@@ -1,6 +1,8 @@
 .DS_Store
 .idea
+.packages
 .project
+.pub
 .settings
 packages
 pubspec.lock

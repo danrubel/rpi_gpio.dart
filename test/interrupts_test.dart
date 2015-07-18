@@ -3,7 +3,7 @@ library test.rpi_gpio.interrupts;
 import 'dart:async';
 
 import 'package:rpi_gpio/rpi_gpio.dart';
-import 'package:unittest/unittest.dart';
+import 'package:test/test.dart';
 
 import 'test_util.dart';
 

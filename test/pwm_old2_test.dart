@@ -3,7 +3,7 @@ library test.rpi_pwm;
 import 'dart:async';
 
 import 'package:rpi_gpio/rpi_pwm.dart';
-import 'package:unittest/unittest.dart';
+import 'package:test/test.dart';
 
 import 'mock_hardware.dart';
 
