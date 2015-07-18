@@ -4,10 +4,11 @@ import 'package:rpi_gpio/rpi_gpio.dart';
 import 'package:rpi_gpio/rpi_hardware.dart' deferred as rpi;
 
 /// Monitor current values for pins 0 - 7 using polling
-main() {
+main() async {
+
   if (isRaspberryPi) {
     // Initialize the underlying hardware library
-    rpi.loadLibrary();
+    await rpi.loadLibrary();
     Gpio.hardware = new rpi.RpiHardware();
   } else {
     // Mock the hardware when testing
