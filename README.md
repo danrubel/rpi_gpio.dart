@@ -1,6 +1,8 @@
 # rpi_gpio.dart
 
 [![pub package](https://img.shields.io/pub/v/rpi_gpio.svg)](https://pub.dartlang.org/packages/rpi_gpio)
+[![Build Status](https://travis-ci.org/danrubel/rpi_gpio.dart.svg?branch=master)](https://travis-ci.org/danrubel/rpi_gpio.dart)
+
 
 rpi_gpio is a Dart library for accessing the Raspberry Pi GPIO pins.
 
