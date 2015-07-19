@@ -14,6 +14,10 @@ import 'test_util.dart';
 
 main() async {
   await setupHardware();
+  runTests();
+}
+
+runTests() {
   var gpio = Gpio.instance;
 
   // Assert wiringPi consts

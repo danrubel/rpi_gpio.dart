@@ -14,6 +14,10 @@ import 'test_util.dart';
 
 main() async {
   await setupHardware();
+  runTests();
+}
+
+runTests() {
   var gpio = Gpio.instance;
 
   // This test assumes that output from wiringPi pin 1 (BMC_GPIO 18, Phys 12)
@@ -32,12 +36,16 @@ main() async {
       }
     }
 
-    sensorPin = gpio.pin(0, input)..pull = pullDown;
-    ledPin = gpio.pin(1, output)..value = 0;
+    sensorPin = gpio.pin(0, input)
+      ..pull = pullDown;
+    ledPin = gpio.pin(1, output)
+      ..value = 0;
     testWriteRead();
 
-    sensorPin = gpio.pin(2, input)..pull = pullDown;
-    ledPin = gpio.pin(3, output)..value = 0;
+    sensorPin = gpio.pin(2, input)
+      ..pull = pullDown;
+    ledPin = gpio.pin(3, output)
+      ..value = 0;
     testWriteRead();
   });
 }

@@ -8,4 +8,5 @@ environment:
 dependencies:
   path: '>=1.0.0 <2.0.0'
 dev_dependencies:
+  grinder: '>=0.7.0 <0.8.0'
   test: '>=0.12.0 <0.13.0'
