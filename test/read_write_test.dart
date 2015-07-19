@@ -36,16 +36,12 @@ runTests() {
       }
     }
 
-    sensorPin = gpio.pin(0, input)
-      ..pull = pullDown;
-    ledPin = gpio.pin(1, output)
-      ..value = 0;
+    sensorPin = gpio.pin(0, input)..pull = pullDown;
+    ledPin = gpio.pin(1, output)..value = 0;
     testWriteRead();
 
-    sensorPin = gpio.pin(2, input)
-      ..pull = pullDown;
-    ledPin = gpio.pin(3, output)
-      ..value = 0;
+    sensorPin = gpio.pin(2, input)..pull = pullDown;
+    ledPin = gpio.pin(3, output)..value = 0;
     testWriteRead();
   });
 }
