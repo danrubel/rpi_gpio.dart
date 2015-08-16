@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2
+
+ * rework isRaspberryPi to check /etc/os-release
+
 ## 0.2.1
 
  * fix bug to track both rising and falling interrupt edge

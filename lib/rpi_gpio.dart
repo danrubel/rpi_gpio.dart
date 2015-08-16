@@ -40,9 +40,17 @@ const List<String> _pinDescriptions = const [
 ];
 
 /// Return [true] if this is running on a Raspberry Pi.
-bool get isRaspberryPi =>
-    //TODO need a better test for Raspberry Pi
-    Platform.isLinux && raspberryPiMarkerFile.existsSync();
+bool get isRaspberryPi {
+  if (!Platform.isLinux) return false;
+  try {
+    if (new File('/etc/os-release').readAsLinesSync().contains('ID=raspbian')) {
+      return true;
+    }
+  } on FileSystemException catch (_) {
+    // fall through
+  }
+  return raspberryPiMarkerFile.existsSync();
+}
 
 /// Return a marker file used to determine if the code is executing on the RPi.
 File get raspberryPiMarkerFile =>
