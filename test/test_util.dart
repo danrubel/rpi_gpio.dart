@@ -31,6 +31,7 @@ Future<GpioHardware> setupHardware() async {
   // Load the Raspberry Pi native method library if running on the RPi
   // otherwise create mock hardware for testing code on other platforms.
   if (isRaspberryPi) await rpi.loadLibrary();
+  print('>>> initializing mock hardware');
   if (recording != null) return recording;
   hardware = isRaspberryPi ? new rpi.RpiHardware() : new MockHardware();
 
