@@ -3,6 +3,7 @@
 ## 0.2.2
 
  * rework isRaspberryPi to check /etc/os-release
+ * rework and simplify [examples](example)
 
 ## 0.2.1
 
@@ -24,4 +25,3 @@
  * Read and write digital values
  * Hardware pulse width modulation on pin 1
  * Software simulated pwm for other pins (work in progress)
-

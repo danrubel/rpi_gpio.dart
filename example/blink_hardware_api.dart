@@ -8,9 +8,12 @@ import 'package:rpi_gpio/rpi_hardware.dart';
 /// connected to Pin 1 (BMC_GPIO 18, Physical Pin 12).
 ///
 /// Typically, users access the GPIO pins via package:rpi_gpio/rpi_gpio.dart
-/// as shown in the blink_sample.dart rather than using this lower level API.
+/// as shown in the blink.dart rather than using this lower level API.
 main() async {
+
+  // Directly access the hardware API
   var hardware = new RpiHardware();
+
   hardware.pinMode(1, 1); // pin 1 output
   for (int count = 0; count < 5; ++count) {
     hardware.digitalWrite(1, 1);

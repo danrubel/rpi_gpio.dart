@@ -44,14 +44,23 @@ rpi_gpio:build_lib runs the [rpi_gpio/bin/build_lib.dart](bin/build_lib.dart)
 program which in turn calls the [build_lib](lib/src/native/build_lib) script
 to compile the native librpi_gpio_ext.so library for the rpi_gpio package.
 
-## Example
+## Examples
 
- * A [blinking LED](example/blink_sample.dart) example
+ * A [read pins](example/read.dart) example demonstrates reading
+   the current value for multiple pins.
+
+ * A second [read pins](example/read_with_mocks.dart) example
+   demonstrates mocking the hardware so that the logic can be run
+   and tested on platforms other than the Raspberry Pi.
+
+ * A [blinking LED](example/blink.dart) example
    and a [motor driver](example/pwm_motor_sample.dart) example
    demonstrate using the [high level GPIO library](lib/rpi_gpio.dart).
  
- * A second [blinking LED](example/blink_sample_hardware_api.dart)
+ * A second [blinking LED](example/blink_hardware_api.dart)
    demonstrates using the [low level hardware API](lib/rpi_hardware.dart).
 
  * The value of GPIO pins can be tracked over time
-   via [polling](example/polling.dart) or [interrupts](example/interrupts.dart)
+   via [interrupts](example/interrupts.dart)
+   or [polling](example/polling.dart).
+

@@ -1,80 +1,40 @@
 import 'dart:async';
-import 'dart:isolate';
 
 import 'package:rpi_gpio/rpi_gpio.dart';
-import 'package:rpi_gpio/rpi_hardware.dart' deferred as rpi;
+import 'package:rpi_gpio/rpi_hardware.dart';
 
-/// Monitor current values for pins 0 - 7 using polling
+/// Use interrupts to monitor the state change on a given pin
+/// This assumes a hardware setup where
+/// * pin 1 = an LED (1 = on, 0 = off)
+/// * pin 0 = a photo resistor detecting the state of the LED on pin 1
 main() async {
 
-  if (isRaspberryPi) {
-    // Initialize the underlying hardware library
-    await rpi.loadLibrary();
-    Gpio.hardware = new rpi.RpiHardware();
-  } else {
-    // Mock the hardware when testing
-    Gpio.hardware = new MockHardware();
-  }
+  // Initialize the hardware
+  // See read_with_mocks.dart for testing on non-RaspberryPi platforms
+  Gpio.hardware = new RpiHardware();
+
   var stopwatch = new Stopwatch()..start();
-
   var gpio = Gpio.instance;
-  var subscriptions = [];
-  for (int pinNum = 0; pinNum < 8; ++pinNum) {
-    var pin = gpio.pin(pinNum, input);
-    subscriptions.add(pin.events.listen((PinEvent event) {
-      print('${stopwatch.elapsedMilliseconds}, '
-          '${MockHardware.elapsedMillisecondsSinceTrigger} : '
-          '${event.value} => ${event.pin}');
-    }));
-    print('${pin.value} => ${pin}');
-  }
 
-  print('=== wait for changes');
-  new Timer(new Duration(milliseconds: 100), () {
-    for (var s in subscriptions) {
-      s.cancel();
-    }
+  var sensorPin = gpio.pin(0, input);
+  var ledPin = gpio.pin(1, output);
+
+  // Subscribe to pin change events
+  print('initial value: ${sensorPin.value}');
+  var subscription = sensorPin.events.listen((PinEvent event) {
+    print('${stopwatch.elapsedMilliseconds} value: ${event.value}');
+
+    // Toggle the LED
+    ledPin.value = event.value == 1 ? 0 : 1;
+  });
+
+  // Turn on the LED
+  ledPin.value = 1;
+
+  // Cancel listening for interrupts after 1 seconds
+  new Timer(new Duration(seconds: 1), () {
+    subscription.cancel();
   });
 }
 
-/// Simulate hardware when testing.
-class MockHardware implements GpioHardware {
-  static var triggerTime = now;
-
-  static get elapsedMillisecondsSinceTrigger =>
-      now.difference(triggerTime).inMilliseconds;
-
-  static DateTime get now => new DateTime.now();
-
-  List<int> values = [0, 0, 0, 0, 0, 0, 0, 0];
-
-  SendPort interruptPort;
-
-  MockHardware() {
-    new Timer(new Duration(milliseconds: 17), () => _changed(3, 1));
-    new Timer(new Duration(milliseconds: 24), () => _changed(1, 1));
-    new Timer(new Duration(milliseconds: 32), () => _changed(2, 1));
-    new Timer(new Duration(milliseconds: 59), () => _changed(6, 1));
-  }
-
-  int digitalRead(int pinNum) => values[pinNum];
-
-  @override
-  int enableInterrupt(int pinNum) => -1;
-
-  @override
-  void initInterrupts(SendPort port) {
-    interruptPort = port;
-  }
-
-  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-
-  void pinMode(int pinNum, int mode) {}
-
-  int _changed(int pinNum, int value) {
-    values[pinNum] = value;
-    triggerTime = now;
-    interruptPort.send(pinNum | (value != 0 ? GpioHardware.pinValueMask : 0));
-    return value;
-  }
-}
+DateTime get now => new DateTime.now();

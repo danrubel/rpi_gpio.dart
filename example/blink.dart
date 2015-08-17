@@ -8,7 +8,11 @@ import 'package:rpi_gpio/rpi_hardware.dart';
 /// Simple example to blink an LED.
 /// connected to Pin 1 (BMC_GPIO 18, Physical Pin 12).
 main() async {
+
+  // Initialize the hardware
+  // See read_with_mocks.dart for testing on non-RaspberryPi platforms
   Gpio.hardware = new RpiHardware();
+
   var gpio = Gpio.instance;
   var pin = gpio.pin(1, output);
   for (int count = 0; count < 5; ++count) {
