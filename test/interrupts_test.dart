@@ -65,6 +65,10 @@ runTests() {
       await future;
     }
 
+    // Instantiate high # pin to check disable interrupts bug is fixed
+    // https://github.com/danrubel/rpi_gpio.dart/issues/7
+    gpio.pin(10, input);
+
     sensorPin = gpio.pin(0, input)..pull = pullDown;
     ledPin = gpio.pin(1, output)..value = 0;
     await testInterrupt();
