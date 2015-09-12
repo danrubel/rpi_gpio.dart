@@ -39,6 +39,9 @@ const List<String> _pinDescriptions = const [
   'Pin 20 (BMC_GPIO 31, Phys P5-6)',
 ];
 
+/// An internal cache of currently defined pins indexed by wiringPi pin #
+List<Pin> _pins = <Pin>[];
+
 /// Return [true] if this is running on a Raspberry Pi.
 bool get isRaspberryPi {
   if (!Platform.isLinux) return false;
@@ -56,6 +59,21 @@ bool get isRaspberryPi {
 File get raspberryPiMarkerFile =>
     //TODO need a better test for Raspberry Pi
     new File('/home/pi/.raspberrypi');
+
+/// Return the [Pin] representing the specified GPIO pin
+/// where [pinNum] is the wiringPi pin number.
+Pin pin(int pinNum, [PinMode mode]) {
+  while (_pins.length <= pinNum) _pins.add(null);
+  Pin pin = _pins[pinNum];
+  if (pin == null) {
+    if (mode == null) throw new GpioException._missingMode(pin);
+    pin = new Pin._(pinNum, mode);
+    _pins[pinNum] = pin;
+  } else if (mode != null) {
+    pin.mode = mode;
+  }
+  return pin;
+}
 
 /// [Gpio] provides access to the General Purpose I/O (GPIO) pins.
 /// Pulse width modulation can be simulated on pins other than pin 1
@@ -83,8 +101,6 @@ class Gpio {
     return _instance;
   }
 
-  List<Pin> _pins = <Pin>[];
-
   /// For emulating pulse width modulation on pins other than pin 1.
   SoftwarePWM _softPwm;
 
@@ -99,6 +115,7 @@ class Gpio {
 
   /// Return the [Pin] representing the specified GPIO pin
   /// where [pinNum] is the wiringPi pin number.
+  @deprecated
   Pin pin(int pinNum, [PinMode mode]) {
     while (_pins.length <= pinNum) _pins.add(null);
     Pin pin = _pins[pinNum];
@@ -227,7 +244,7 @@ abstract class GpioHardware {
 }
 
 /// [Pin] represents a single GPIO pin for Raspberry Pi
-/// based upon the wiringPi library. See [Gpio.pin].
+/// based upon the wiringPi library. See the top level [pin] function.
 class Pin {
 
   /// The wiringPi pin number.

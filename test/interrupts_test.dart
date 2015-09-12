@@ -20,7 +20,8 @@ main() async {
 }
 
 runTests() {
-  var gpio = Gpio.instance;
+  // TODO fix so that this method need not be called
+  Gpio.instance;
 
   // This test assumes that output from wiringPi pin 1 (BMC_GPIO 18, Phys 12)
   // can trigger an interrupt on wiringPi pin 0 (BMC_GPIO 17, Phys 11),
@@ -67,14 +68,14 @@ runTests() {
 
     // Instantiate high # pin to check disable interrupts bug is fixed
     // https://github.com/danrubel/rpi_gpio.dart/issues/7
-    gpio.pin(10, input);
+    pin(10, input);
 
-    sensorPin = gpio.pin(0, input)..pull = pullDown;
-    ledPin = gpio.pin(1, output)..value = 0;
+    sensorPin = pin(0, input)..pull = pullDown;
+    ledPin = pin(1, output)..value = 0;
     await testInterrupt();
 
-    sensorPin = gpio.pin(2, input)..pull = pullDown;
-    ledPin = gpio.pin(3, output)..value = 0;
+    sensorPin = pin(2, input)..pull = pullDown;
+    ledPin = pin(3, output)..value = 0;
     await testInterrupt();
   });
 }

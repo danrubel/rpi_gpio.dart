@@ -18,8 +18,6 @@ main() async {
 }
 
 runTests() {
-  var gpio = Gpio.instance;
-
   // This test assumes that output from wiringPi pin 1 (BMC_GPIO 18, Phys 12)
   // can be read as input on wiringPi pin 0 (BMC_GPIO 17, Phys 11).
   test('read/write digital', () {
@@ -36,12 +34,12 @@ runTests() {
       }
     }
 
-    sensorPin = gpio.pin(0, input)..pull = pullDown;
-    ledPin = gpio.pin(1, output)..value = 0;
+    sensorPin = pin(0, input)..pull = pullDown;
+    ledPin = pin(1, output)..value = 0;
     testWriteRead();
 
-    sensorPin = gpio.pin(2, input)..pull = pullDown;
-    ledPin = gpio.pin(3, output)..value = 0;
+    sensorPin = pin(2, input)..pull = pullDown;
+    ledPin = pin(3, output)..value = 0;
     testWriteRead();
   });
 }

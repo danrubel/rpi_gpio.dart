@@ -2,6 +2,7 @@
 
 ## 0.2.2
 
+ * add top level pin function and deprecated Gpio.pin method
  * rework isRaspberryPi to check /etc/os-release
  * rework and simplify [examples](example)
 

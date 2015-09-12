@@ -74,7 +74,7 @@ class RecordingHardware implements GpioHardware {
     _hardware.pinMode(pinNum, modeIndex);
   }
 
-  void printUsage(Gpio gpio) {
+  void printUsage() {
     var map = <int, Set<PinMode>>{};
     print('');
     print('Rev 2 GPIO hardware events');
@@ -86,7 +86,7 @@ class RecordingHardware implements GpioHardware {
     for (_PinState state in _states) {
       var pinNum = state.pinNum;
       var pinMode = state.mode;
-      print('${gpio.pin(pinNum).description} ${pinMode}');
+      print('${pin(pinNum).description} ${pinMode}');
       var modes = map[pinNum];
       if (modes == null) {
         modes = new Set<PinMode>();
@@ -99,7 +99,7 @@ class RecordingHardware implements GpioHardware {
     var separator = ' ';
     for (int pinNum in map.keys.toList()..sort()) {
       var sb = new StringBuffer();
-      sb.write(gpio.pin(pinNum).description);
+      sb.write(pin(pinNum).description);
       for (PinMode mode in map[pinNum]) {
         sb.write(separator);
         sb.write(mode);

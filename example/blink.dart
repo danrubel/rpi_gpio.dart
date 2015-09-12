@@ -13,12 +13,14 @@ main() async {
   // See read_with_mocks.dart for testing on non-RaspberryPi platforms
   Gpio.hardware = new RpiHardware();
 
-  var gpio = Gpio.instance;
-  var pin = gpio.pin(1, output);
+  // TODO Remove the need to call this method for initialization
+  Gpio.instance;
+
+  var ledPin = pin(1, output);
   for (int count = 0; count < 5; ++count) {
-    pin.value = 1;
+    ledPin.value = 1;
     await _delay(1000);
-    pin.value = 0;
+    ledPin.value = 0;
     await _delay(1000);
   }
 }

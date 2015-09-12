@@ -18,8 +18,6 @@ main() async {
 }
 
 runTests() {
-  var gpio = Gpio.instance;
-
   // Assert wiringPi consts
   test('basic const', () {
     expect(input.index, 0);
@@ -40,10 +38,10 @@ runTests() {
         // Expected... fall through
       }
     }
-    expectThrows(() => gpio.pin(0, input).value = 1);
-    expectThrows(() => gpio.pin(1, output).value);
-    expectThrows(() => gpio.pin(1, output).pulseWidth = 10);
-    expectThrows(() => gpio.pin(4, output).pull = pullUp);
+    expectThrows(() => pin(0, input).value = 1);
+    expectThrows(() => pin(1, output).value);
+    expectThrows(() => pin(1, output).pulseWidth = 10);
+    expectThrows(() => pin(4, output).pull = pullUp);
 //
 //      fail('Does wiringPi throw an exception'
 //          ' if PWM is used on a pin other than pin 1?');
@@ -61,9 +59,9 @@ runTests() {
   // Assert that each pin is represented by a single instance
   // regardless of mode.
   test('basic identical', () {
-    var pinA = gpio.pin(4, output);
+    var pinA = pin(4, output);
     expect(pinA.mode, output);
-    var pinB = gpio.pin(4, input);
+    var pinB = pin(4, input);
     expect(pinB.mode, input);
     expect(identical(pinA, pinB), isTrue);
   });
@@ -71,17 +69,17 @@ runTests() {
   // Test the pull up and pull down resistor settings
   // on a disconnected pin
   test('basic pull up/down', () {
-    var pin = gpio.pin(4, input);
-    expect(pin.pull, pullOff);
-    pin.pull = pullUp;
-    assertValue(pin, 1);
-    expect(pin.pull, pullUp);
-    pin.pull = null;
-    expect(pin.pull, pullOff);
-    pin.pull = pullDown;
-    assertValue(pin, 0);
-    expect(pin.pull, pullDown);
-    pin.pull = pullOff;
-    expect(pin.pull, pullOff);
+    var pin4 = pin(4, input);
+    expect(pin4.pull, pullOff);
+    pin4.pull = pullUp;
+    assertValue(pin4, 1);
+    expect(pin4.pull, pullUp);
+    pin4.pull = null;
+    expect(pin4.pull, pullOff);
+    pin4.pull = pullDown;
+    assertValue(pin4, 0);
+    expect(pin4.pull, pullDown);
+    pin4.pull = pullOff;
+    expect(pin4.pull, pullOff);
   });
 }

@@ -14,11 +14,8 @@ main() async {
     Gpio.hardware = new MockHardware();
   }
 
-  var gpio = Gpio.instance;
-  var pins = gpio.pin;
   for (int pinNum = 0; pinNum < 8; ++pinNum) {
-    var pin = pins(pinNum, input);
-    print('${pin.value} => ${pin.description}');
+    print('${pin(pinNum, input).value} => ${pin(pinNum, input).description}');
   }
 }
 

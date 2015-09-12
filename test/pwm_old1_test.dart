@@ -17,16 +17,14 @@ main() async {
   // pin 1 = an LED (1 = on, 0 = off)
   // pin 0 = a photo resistor detecting the state of the LED on pin 1
   group('Gpio', () {
-    var gpio = Gpio.instance;
-
     // This test assumes that output from wiringPi pin 1 (BMC_GPIO 18, Phys 12)
     // can be read as input on wiringPi pin 0 (BMC_GPIO 17, Phys 11).
     // In addition, it assumes that at some point when the pin 1 pulse width
     // reaches some threshold, the input for pin 0 will transition from
     // one state to another.
     test('pulseWidth and digitalRead - hardware pwm gpio.1', () async {
-      Pin sensorPin = gpio.pin(0, input)..pull = pullDown;
-      Pin ledPin = gpio.pin(1, pulsed)..pulseWidth = 0;
+      Pin sensorPin = pin(0, input)..pull = pullDown;
+      Pin ledPin = pin(1, pulsed)..pulseWidth = 0;
       assertValue(sensorPin, 0);
 
       // Increase and note threshold at which pin 0 state changes
@@ -45,8 +43,8 @@ main() async {
     // reaches some threshold, the input for pin 2 will transition from
     // one state to another.
     test('pulseWidth and digitalRead - software pwm gpio.3', () async {
-      Pin sensorPin = gpio.pin(2, input)..pull = pullDown;
-      Pin ledPin = gpio.pin(3, pulsed)..pulseWidth = 0;
+      Pin sensorPin = pin(2, input)..pull = pullDown;
+      Pin ledPin = pin(3, pulsed)..pulseWidth = 0;
       assertValue(sensorPin, 0);
 
       // Increase and note threshold at which pin 0 state changes
@@ -57,14 +55,6 @@ main() async {
       //expect((thresholdDown - thresholdUp).abs(), lessThanOrEqualTo(20));
 
       print('software pwm thresholds - $thresholdUp, $thresholdDown');
-    });
-
-    test('pins used', () {
-      // Ensure LEDs are off
-      gpio.pin(1, output)..value = 0;
-      gpio.pin(3, output)..value = 0;
-      // Print pin state changes
-      if (recording != null) recording.printUsage(gpio);
     });
   });
 }

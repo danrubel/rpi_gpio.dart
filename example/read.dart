@@ -8,9 +8,11 @@ main() async {
   // See read_with_mocks.dart for testing on non-RaspberryPi platforms
   Gpio.hardware = new RpiHardware();
 
-  var gpio = Gpio.instance;
+  // TODO remove the need to call this method
+  Gpio.instance;
+
   for (int pinNum = 0; pinNum < 8; ++pinNum) {
-    var pin = gpio.pin(pinNum, input);
-    print('${pin.value} => ${pin.description}');
+    var p = pin(pinNum, input);
+    print('${p.value} => ${p.description}');
   }
 }

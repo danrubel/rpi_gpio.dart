@@ -14,10 +14,12 @@ main() async {
   Gpio.hardware = new RpiHardware();
 
   var stopwatch = new Stopwatch()..start();
-  var gpio = Gpio.instance;
 
-  var sensorPin = gpio.pin(0, input);
-  var ledPin = gpio.pin(1, output);
+  // Remove the need to call this method for initialization
+  Gpio.instance;
+
+  var sensorPin = pin(0, input);
+  var ledPin = pin(1, output);
 
   // Subscribe to pin change events
   print('initial value: ${sensorPin.value}');

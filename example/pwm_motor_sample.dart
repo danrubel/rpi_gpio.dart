@@ -13,10 +13,12 @@ import 'package:rpi_gpio/rpi_gpio.dart';
 /// GPIO 2 (BMC_GPIO 27, Physical Pin 13) uses software pwm.
 main() async {
   Gpio.hardware = new RpiHardware();
-  var gpio = Gpio.instance;
 
-  var pin1 = gpio.pin(1, pulsed);
-  var pin2 = gpio.pin(2, pulsed);
+  // TODO Remove the need to call this method for initialization
+  Gpio.instance;
+
+  var pin1 = pin(1, pulsed);
+  var pin2 = pin(2, pulsed);
 
   var speed1 = 64;
   var speed2 = 128;
