@@ -26,6 +26,9 @@ class RpiHardware implements GpioHardware {
   int enableInterrupt(int pinNum) native "enableInterrupt";
 
   @override
+  int gpioNum(int pinNum) native "wpiPinToGpio";
+
+  @override
   void initInterrupts(SendPort port) native "initInterrupts";
 
   @override

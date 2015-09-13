@@ -28,6 +28,14 @@ runTests() {
     expect(pullUp.index, 2);
   });
 
+  // Assert pinNum to gpioNum
+  test('gpioNum', () {
+    expect(pin(0, input).gpioNum, 17);
+    expect(pin(1, input).gpioNum, 18);
+    expect(pin(2, input).gpioNum, 27);
+    expect(pin(3, input).gpioNum, 22);
+  });
+
   // Assert that pins cannot be used contrary to their current mode
   test('basic mode', () {
     expectThrows(f()) {

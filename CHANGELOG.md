@@ -3,6 +3,7 @@
 ## 0.2.2
 
  * add top level pin function and deprecated Gpio.pin method
+ * add gpioNum method to return GPIO number for pin
  * rework isRaspberryPi to check /etc/os-release
  * rework and simplify [examples](example)
 

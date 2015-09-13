@@ -15,28 +15,28 @@ const PinMode pulsed = PinMode.pulsed;
 
 /// Human readable description of known Raspberry Pi rev 2 GPIO pins
 /// See http://wiringpi.com/pins/special-pin-functions/
-const List<String> _pinDescriptions = const [
-  'Pin 0  (BMC_GPIO 17, Phys 11)',
-  'Pin 1  (BMC_GPIO 18, Phys 12, PMW)',
-  'Pin 2  (BMC_GPIO 27, Phys 13)', // BMC_GPIO 21 on rev 1 board
-  'Pin 3  (BMC_GPIO 22, Phys 15)',
-  'Pin 4  (BMC_GPIO 23, Phys 16)',
-  'Pin 5  (BMC_GPIO 24, Phys 18)',
-  'Pin 6  (BMC_GPIO 25, Phys 22)',
-  'Pin 7  (BMC_GPIO 4,  Phys 7,  Clock)',
-  'Pin 8  (BMC_GPIO 2,  Phys 3,  I2C SDA0/1)', // BMC_GPIO 0 on rev 1 board
-  'Pin 9  (BMC_GPIO 3,  Phys 5,  I2C SCL0/1)', // BMC_GPIO 1 on rev 1 board
-  'Pin 10 (BMC_GPIO 8,  Phys 24, SPI CE0)',
-  'Pin 11 (BMC_GPIO 7,  Phys 26, SPI CE1)',
-  'Pin 12 (BMC_GPIO 10, Phys 19, SPI MOSI)',
-  'Pin 13 (BMC_GPIO 9,  Phys 21, SPI MISO)',
-  'Pin 14 (BMC_GPIO 11, Phys 23, SPI SCLK)',
-  'Pin 15 (BMC_GPIO 14, Phys 8,  UART TxD, Console)',
-  'Pin 16 (BMC_GPIO 15, Phys 10, UART RxD, Console)',
-  'Pin 17 (BMC_GPIO 28, Phys P5-3)',
-  'Pin 18 (BMC_GPIO 29, Phys P5-4)',
-  'Pin 19 (BMC_GPIO 30, Phys P5-5)',
-  'Pin 20 (BMC_GPIO 31, Phys P5-6)',
+const List<String> _descriptionSuffix = const [
+  'Phys 11)',
+  'Phys 12, PMW)',
+  'Phys 13)',
+  'Phys 15)',
+  'Phys 16)',
+  'Phys 18)',
+  'Phys 22)',
+  'Phys 7,  Clock)',
+  'Phys 3,  I2C SDA0/1)',
+  'Phys 5,  I2C SCL0/1)',
+  'Phys 24, SPI CE0)',
+  'Phys 26, SPI CE1)',
+  'Phys 19, SPI MOSI)',
+  'Phys 21, SPI MISO)',
+  'Phys 23, SPI SCLK)',
+  'Phys 8,  UART TxD, Console)',
+  'Phys 10, UART RxD, Console)',
+  'Phys P5-3)',
+  'Phys P5-4)',
+  'Phys P5-5)',
+  'Phys P5-6)',
 ];
 
 /// An internal cache of currently defined pins indexed by wiringPi pin #
@@ -79,7 +79,6 @@ Pin pin(int pinNum, [PinMode mode]) {
 /// Pulse width modulation can be simulated on pins other than pin 1
 /// by substituting different [GpioHardware] implements via [hardware] method.
 class Gpio {
-
   /// The single [Gpio] instance
   /// or `null` if [instance] has not yet been called.
   static Gpio _instance;
@@ -214,6 +213,9 @@ abstract class GpioHardware {
   /// TODO provide the ability to disable interrupts for a given pin.
   int enableInterrupt(int pinNum);
 
+  /// Return the GPIO number for the given WiringPi pin number.
+  int gpioNum(int pinNum);
+
   /// Initialize the background interrupt listener.
   /// Once called, interrupt events will be sent to [port].
   /// Each message is an int indicating the pin on which the interrupt occurred
@@ -246,7 +248,6 @@ abstract class GpioHardware {
 /// [Pin] represents a single GPIO pin for Raspberry Pi
 /// based upon the wiringPi library. See the top level [pin] function.
 class Pin {
-
   /// The wiringPi pin number.
   final int pinNum;
 
@@ -268,9 +269,11 @@ class Pin {
   }
 
   /// Return a human readable description of this pin
-  String get description => pinNum >= 0 && pinNum <= _pinDescriptions.length
-      ? _pinDescriptions[pinNum]
-      : 'Pin $pinNum';
+  String get description {
+    return pinNum >= 0 && pinNum <= _descriptionSuffix.length
+        ? 'Pin $pinNum (BMC_GPIO $gpioNum, ${_descriptionSuffix[pinNum]}'
+        : 'Pin $pinNum';
+  }
 
   /// Return a stream of pin events indicating state changes.
   Stream<PinEvent> get events {
@@ -291,6 +294,9 @@ class Pin {
     }
     return _events.stream;
   }
+
+  /// Return the GPIO number for this pin
+  int get gpioNum => Gpio._hardware.gpioNum(pinNum);
 
   /// Return the mode ([input], [output], [pulsed]) for this pin.
   PinMode get mode => _mode;
@@ -365,7 +371,6 @@ class Pin {
 
 /// An event indicating that a pin has changed state.
 class PinEvent {
-
   /// The pin that changed state.
   final Pin pin;
 

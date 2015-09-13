@@ -13,6 +13,7 @@ class NoOpHardware extends GpioHardware {
   @override void pinMode(int pinNum, int mode) {}
   @override void pullUpDnControl(int pinNum, int pud) {}
   @override void pwmWrite(int pinNum, int pulseWidth) {}
+  @override int gpioNum(int pinNum) => -1;
 }
 
 /// Records modes used with the GPIO hardware,
@@ -55,6 +56,9 @@ class RecordingHardware implements GpioHardware {
   int enableInterrupt(int pinNum) => _hardware.enableInterrupt(pinNum);
 
   @override
+  int gpioNum(int pinNum) => _hardware.gpioNum(pinNum);
+
+  @override
   void initInterrupts(SendPort port) {
     _clientPort = port;
     _hardwarePort = new ReceivePort()
@@ -86,7 +90,7 @@ class RecordingHardware implements GpioHardware {
     for (_PinState state in _states) {
       var pinNum = state.pinNum;
       var pinMode = state.mode;
-      print('${pin(pinNum).description} ${pinMode}');
+      print('${pin(pinNum).description}    ${pinMode}');
       var modes = map[pinNum];
       if (modes == null) {
         modes = new Set<PinMode>();
@@ -96,8 +100,8 @@ class RecordingHardware implements GpioHardware {
     }
     print('');
     print('Rev 2 GPIO Pins used');
-    var separator = ' ';
     for (int pinNum in map.keys.toList()..sort()) {
+      var separator = '    ';
       var sb = new StringBuffer();
       sb.write(pin(pinNum).description);
       for (PinMode mode in map[pinNum]) {

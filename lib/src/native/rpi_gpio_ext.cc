@@ -217,6 +217,17 @@ void pwmWrite(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+// Return the GPIO number for the given wiringPi pin number
+void wpiPinToGpio(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  Dart_Handle pin_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
+  int64_t pin_num;
+  HandleError(Dart_IntegerToInt64(pin_obj, &pin_num));
+  int gpioNum = wpiPinToGpio(pin_num);
+  Dart_Handle result = HandleError(Dart_NewInteger(gpioNum));
+  Dart_SetReturnValue(arguments, result);
+}
+
 // ===== Interrupts ===============================================
 
 // Main interrupt handler
@@ -357,6 +368,7 @@ FunctionLookup function_list[] = {
   {"pinMode", pinMode},
   {"pullUpDnControl", pullUpDnControl},
   {"pwmWrite", pwmWrite},
+  {"wpiPinToGpio", wpiPinToGpio},
   {NULL, NULL}
 };
 
