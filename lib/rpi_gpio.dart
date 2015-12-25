@@ -64,7 +64,7 @@ Pin pin(int pinNum, [Mode mode]) {
   while (_pins.length <= pinNum) _pins.add(null);
   Pin pin = _pins[pinNum];
   if (pin == null) {
-    if (mode == null) throw new GpioException._missingMode(pin);
+    if (mode == null) throw new GPIOException._missingMode(pin);
     pin = new Pin._(pinNum, mode);
     _pins[pinNum] = pin;
   } else if (mode != null) {
@@ -87,7 +87,7 @@ class Gpio {
   /// Set the underlying hardware API used by the [Gpio] [instance].
   /// This may be only called once.
   static void set hardware(GpioHardware hardware) {
-    if (_hardware != null) throw new GpioException._hardwareAlreadySet();
+    if (_hardware != null) throw new GPIOException._hardwareAlreadySet();
     _hardware = hardware;
   }
 
@@ -106,7 +106,7 @@ class Gpio {
   ReceivePort _interruptEventPort;
 
   Gpio._() {
-    if (_hardware == null) throw new GpioException._setHardware();
+    if (_hardware == null) throw new GPIOException._setHardware();
     _softPwm = new SoftwarePWM(_hardware);
   }
 
@@ -117,7 +117,7 @@ class Gpio {
     while (_pins.length <= pinNum) _pins.add(null);
     Pin pin = _pins[pinNum];
     if (pin == null) {
-      if (mode == null) throw new GpioException._missingMode(pin);
+      if (mode == null) throw new GPIOException._missingMode(pin);
       pin = new Pin._(pinNum, mode);
       _pins[pinNum] = pin;
     } else if (mode != null) {
@@ -161,24 +161,26 @@ class Gpio {
   }
 }
 
-class GpioException {
-  final Pin pin;
+/// Exceptions thrown by GPIO.
+class GPIOException {
+  /// Exception message.
   final String message;
+  final Pin pin;
 
-  GpioException._hardwareAlreadySet()
+  GPIOException._hardwareAlreadySet()
       : pin = null,
         message = 'Gpio.hardware has already been set';
 
-  GpioException._missingMode(this.pin)
+  GPIOException._missingMode(this.pin)
       : message = 'Must specify initial pin mode';
 
-  GpioException._mustCancelEventSubscription(this.pin)
+  GPIOException._mustCancelEventSubscription(this.pin)
       : message = 'Must cancel event stream subscription before changing mode';
 
-  GpioException._selector(this.pin, String selector)
+  GPIOException._selector(this.pin, String selector)
       : message = 'Invalid call: $selector for mode';
 
-  GpioException._setHardware()
+  GPIOException._setHardware()
       : pin = null,
         message = 'Gpio.hardware must be set';
 
@@ -278,7 +280,7 @@ class Pin {
     if (_events == null) {
       _events = new StreamController(onListen: () {
         if (_mode != Mode.input) {
-          _events.addError(new GpioException._selector(this, 'events.listen'));
+          _events.addError(new GPIOException._selector(this, 'events.listen'));
           return;
         }
         Gpio._instance._initInterrupts();
@@ -306,7 +308,7 @@ class Pin {
       Gpio._instance._softPwm.pulseWidth(pinNum, null);
     }
     if (_mode == Mode.input && mode != Mode.input && _events != null) {
-      throw new GpioException._mustCancelEventSubscription(this);
+      throw new GPIOException._mustCancelEventSubscription(this);
     }
     _mode = mode;
     if (pinNum != 1 && mode == Mode.pulsed) {
@@ -324,7 +326,7 @@ class Pin {
   /// The internal pull up/down resistors have a value
   /// of approximately 50KΩ on the Raspberry Pi
   void set pull(PinPull pull) {
-    if (mode != Mode.input) throw new GpioException._selector(this, 'pull');
+    if (mode != Mode.input) throw new GPIOException._selector(this, 'pull');
     _pull = pull != null ? pull : pullOff;
     Gpio._hardware.pullUpDnControl(pinNum, _pull.index);
   }
@@ -333,7 +335,7 @@ class Pin {
   /// The Raspberry Pi has one on-board PWM pin, pin 1 (BMC_GPIO 18, Phys 12).
   /// PWM on all other pins must be simulated via software.
   void set pulseWidth(int pulseWidth) {
-    if (mode != Mode.pulsed) throw new GpioException._selector(this, 'pulseWidth');
+    if (mode != Mode.pulsed) throw new GPIOException._selector(this, 'pulseWidth');
     if (pinNum == 1) {
       Gpio._hardware.pwmWrite(pinNum, pulseWidth);
     } else {
@@ -343,14 +345,14 @@ class Pin {
 
   /// Return the digital value (0 = low, 1 = high) for this pin.
   int get value {
-    if (mode != Mode.input) throw new GpioException._selector(this, 'value');
+    if (mode != Mode.input) throw new GPIOException._selector(this, 'value');
     return Gpio._hardware.digitalRead(pinNum);
   }
 
   /// Set the digital value (0 = low, 1 = high) for this pin.
   /// Any value other than zero is considered high.
   void set value(int value) {
-    if (mode != Mode.output) throw new GpioException._selector(this, 'value=');
+    if (mode != Mode.output) throw new GPIOException._selector(this, 'value=');
     Gpio._hardware.digitalWrite(pinNum, value);
   }
 

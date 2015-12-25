@@ -42,7 +42,7 @@ runTests() {
       try {
         f();
         fail('expected exception');
-      } on GpioException {
+      } on GPIOException {
         // Expected... fall through
       }
     }
