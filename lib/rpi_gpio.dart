@@ -13,7 +13,8 @@ const PinPull pullOff = PinPull.off;
 const PinPull pullUp = PinPull.up;
 const PinMode pulsed = PinMode.pulsed;
 
-/// Human readable description of known Raspberry Pi rev 2 GPIO pins
+/// Indexed by pin number, these strings are used to build
+/// human readable description of known Raspberry Pi rev 2 GPIO pins.
 /// See http://wiringpi.com/pins/special-pin-functions/
 const List<String> _descriptionSuffix = const [
   'Phys 11)',

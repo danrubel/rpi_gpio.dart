@@ -2,6 +2,7 @@
 
 ## 0.2.2
 
+ * update wiringPi native code for Pi v2
  * add top level pin function and deprecated Gpio.pin method
  * add gpioNum method to return GPIO number for pin
  * rework isRaspberryPi to check /etc/os-release
