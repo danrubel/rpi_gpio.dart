@@ -6,12 +6,9 @@ import 'dart:isolate';
 
 import 'package:rpi_gpio/rpi_pwm.dart';
 
-const PinMode input = PinMode.input;
-const PinMode output = PinMode.output;
 const PinPull pullDown = PinPull.down;
 const PinPull pullOff = PinPull.off;
 const PinPull pullUp = PinPull.up;
-const PinMode pulsed = PinMode.pulsed;
 
 /// Indexed by pin number, these strings are used to build
 /// human readable description of known Raspberry Pi rev 2 GPIO pins.
@@ -63,7 +60,7 @@ File get raspberryPiMarkerFile =>
 
 /// Return the [Pin] representing the specified GPIO pin
 /// where [pinNum] is the wiringPi pin number.
-Pin pin(int pinNum, [PinMode mode]) {
+Pin pin(int pinNum, [Mode mode]) {
   while (_pins.length <= pinNum) _pins.add(null);
   Pin pin = _pins[pinNum];
   if (pin == null) {
@@ -116,7 +113,7 @@ class Gpio {
   /// Return the [Pin] representing the specified GPIO pin
   /// where [pinNum] is the wiringPi pin number.
   @deprecated
-  Pin pin(int pinNum, [PinMode mode]) {
+  Pin pin(int pinNum, [Mode mode]) {
     while (_pins.length <= pinNum) _pins.add(null);
     Pin pin = _pins[pinNum];
     if (pin == null) {
@@ -196,12 +193,12 @@ abstract class GpioHardware {
 
   /// Return the value for the given pin.
   /// 0 = low or ground, 1 = high or positive.
-  /// The [pinMode] should be set to [input] before calling this method.
+  /// The pin should be set to [Mode.input] before calling this method.
   int digitalRead(int pinNum);
 
   /// Set the current output voltage for the given pin.
   /// 0 = low or ground, 1 = high or positive.
-  /// The [pinMode] should be set to [output] before calling this method.
+  /// The pin should be set to [Mode.output] before calling this method.
   void digitalWrite(int pinNum, int value);
 
   /// Disable the background interrupt listener.
@@ -210,7 +207,7 @@ abstract class GpioHardware {
   /// Enable interrupts for the given pin.
   /// Throws an exception if [initInterrupts] has not been called
   /// or if there cannot be any more active interrupts.
-  /// The [pinMode] should be set to [input] before calling this method.
+  /// The pin should be set to [Mode.input] before calling this method.
   /// TODO provide the ability to disable interrupts for a given pin.
   int enableInterrupt(int pinNum);
 
@@ -231,18 +228,18 @@ abstract class GpioHardware {
   void initInterrupts(SendPort port);
 
   /// Set the given pin to the specified mode,
-  /// which can be any of [PinMode] (e.g. [PinMode.input.index]).
+  /// which can be any of [Mode] (e.g. [Mode.input.index]).
   void pinMode(int pinNum, int mode);
 
   /// Set the internal pull up/down resistor attached to the given pin,
   /// which can be any of [PinPull] (e.g. [PinPull.up.index]).
-  /// The [pinMode] should be set to [input] before calling this method.
+  /// The pin should be set to [Mode.input] before calling this method.
   void pullUpDnControl(int pinNum, int pud);
 
   /// Set the pulse width for the given pin.
   /// The pulse width is a number between 0 and 1024 representing the amount
   /// of time out of 1024 that the pin outputs a high value rather than ground.
-  /// The [pinMode] should be set to [pulsed] before calling this method.
+  /// The pin should be set to [Mode.pulsed] before calling this method.
   void pwmWrite(int pinNum, int pulseWidth);
 }
 
@@ -252,8 +249,8 @@ class Pin {
   /// The wiringPi pin number.
   final int pinNum;
 
-  /// The pin mode: [input], [output], [pulsed]
-  PinMode _mode;
+  /// The pin mode: [Mode.input], [Mode.output], [Mode.pulsed]
+  Mode _mode;
 
   /// The state of the pin's pull up/down resistor
   PinPull _pull = pullOff;
@@ -265,7 +262,7 @@ class Pin {
   /// This is used to filter duplicate interrupts.
   int _lastInterruptValue;
 
-  Pin._(this.pinNum, PinMode mode) {
+  Pin._(this.pinNum, Mode mode) {
     this.mode = mode;
   }
 
@@ -280,7 +277,7 @@ class Pin {
   Stream<PinEvent> get events {
     if (_events == null) {
       _events = new StreamController(onListen: () {
-        if (_mode != input) {
+        if (_mode != Mode.input) {
           _events.addError(new GpioException._selector(this, 'events.listen'));
           return;
         }
@@ -299,22 +296,22 @@ class Pin {
   /// Return the GPIO number for this pin
   int get gpioNum => Gpio._hardware.gpioNum(pinNum);
 
-  /// Return the mode ([input], [output], [pulsed]) for this pin.
-  PinMode get mode => _mode;
+  /// Return the mode ([Mode.input], [Mode.output], [Mode.pulsed]) for this pin.
+  Mode get mode => _mode;
 
-  /// Set the mode ([input], [output], [pulsed]) for this pin.
-  void set mode(PinMode mode) {
-    if (_mode == pulsed && mode != pulsed) {
+  /// Set the mode ([Mode.input], [Mode.output], [Mode.pulsed]) for this pin.
+  void set mode(Mode mode) {
+    if (_mode == Mode.pulsed && mode != Mode.pulsed) {
       // Turn off software simulated pwm
       Gpio._instance._softPwm.pulseWidth(pinNum, null);
     }
-    if (_mode == input && mode != input && _events != null) {
+    if (_mode == Mode.input && mode != Mode.input && _events != null) {
       throw new GpioException._mustCancelEventSubscription(this);
     }
     _mode = mode;
-    if (pinNum != 1 && mode == pulsed) {
+    if (pinNum != 1 && mode == Mode.pulsed) {
       // Simulate pulse width modulation using standard output mode
-      Gpio._hardware.pinMode(pinNum, output.index);
+      Gpio._hardware.pinMode(pinNum, Mode.output.index);
     } else {
       Gpio._hardware.pinMode(pinNum, mode.index);
     }
@@ -327,7 +324,7 @@ class Pin {
   /// The internal pull up/down resistors have a value
   /// of approximately 50KΩ on the Raspberry Pi
   void set pull(PinPull pull) {
-    if (mode != input) throw new GpioException._selector(this, 'pull');
+    if (mode != Mode.input) throw new GpioException._selector(this, 'pull');
     _pull = pull != null ? pull : pullOff;
     Gpio._hardware.pullUpDnControl(pinNum, _pull.index);
   }
@@ -336,7 +333,7 @@ class Pin {
   /// The Raspberry Pi has one on-board PWM pin, pin 1 (BMC_GPIO 18, Phys 12).
   /// PWM on all other pins must be simulated via software.
   void set pulseWidth(int pulseWidth) {
-    if (mode != pulsed) throw new GpioException._selector(this, 'pulseWidth');
+    if (mode != Mode.pulsed) throw new GpioException._selector(this, 'pulseWidth');
     if (pinNum == 1) {
       Gpio._hardware.pwmWrite(pinNum, pulseWidth);
     } else {
@@ -346,14 +343,14 @@ class Pin {
 
   /// Return the digital value (0 = low, 1 = high) for this pin.
   int get value {
-    if (mode != input) throw new GpioException._selector(this, 'value');
+    if (mode != Mode.input) throw new GpioException._selector(this, 'value');
     return Gpio._hardware.digitalRead(pinNum);
   }
 
   /// Set the digital value (0 = low, 1 = high) for this pin.
   /// Any value other than zero is considered high.
   void set value(int value) {
-    if (mode != output) throw new GpioException._selector(this, 'value=');
+    if (mode != Mode.output) throw new GpioException._selector(this, 'value=');
     Gpio._hardware.digitalWrite(pinNum, value);
   }
 
@@ -384,10 +381,10 @@ class PinEvent {
   toString() => '$pin value: $value';
 }
 
-/// A pin can be set to receive [input] and interrupts, have a particular
+/// A GPIO pin can be set to receive [input] and interrupts, have a particular
 /// [output] value, or be [pulsed] (Pulse Width Modulation or PWM).
-enum PinMode { input, output, pulsed }
+enum Mode { input, output, pulsed }
 
-/// When a pin is in [input] mode, it can have an internal pull up or pull
+/// When a pin is in [Mode.input] mode, it can have an internal pull up or pull
 /// down resistor connected.
 enum PinPull { off, down, up }

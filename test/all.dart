@@ -20,8 +20,8 @@ runTests() {
 
   test('pins used', () {
     // Ensure LEDs are off
-    pin(1, output)..value = 0;
-    pin(3, output)..value = 0;
+    pin(1, Mode.output)..value = 0;
+    pin(3, Mode.output)..value = 0;
     // Print pin state changes
     if (recording != null) recording.printUsage();
   });

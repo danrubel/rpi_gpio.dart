@@ -16,7 +16,7 @@ main() async {
   // TODO Remove the need to call this method for initialization
   Gpio.instance;
 
-  var ledPin = pin(1, output);
+  var ledPin = pin(1, Mode.output);
   for (int count = 0; count < 5; ++count) {
     ledPin.value = 1;
     await _delay(1000);

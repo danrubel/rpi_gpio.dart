@@ -29,7 +29,7 @@ main() {
       expect(hardware.stateChanges, hasLength(2));
     });
 
-    test('pulsed', () async {
+    test('Mode.pulsed', () async {
       hardware.reset();
       pwm.pulseWidth(3, 400);
       await _delay(30);

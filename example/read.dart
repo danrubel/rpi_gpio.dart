@@ -12,7 +12,7 @@ main() async {
   Gpio.instance;
 
   for (int pinNum = 0; pinNum < 8; ++pinNum) {
-    var p = pin(pinNum, input);
+    var p = pin(pinNum, Mode.input);
     print('${p.value} => ${p.description}');
   }
 }

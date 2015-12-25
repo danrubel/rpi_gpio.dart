@@ -36,13 +36,13 @@ class RecordingHardware implements GpioHardware {
 
   @override
   int digitalRead(int pinNum) {
-    _assertMode(pinNum, input);
+    _assertMode(pinNum, Mode.input);
     return _hardware != null ? _hardware.digitalRead(pinNum) : 0;
   }
 
   @override
   void digitalWrite(int pinNum, int value) {
-    _assertMode(pinNum, output);
+    _assertMode(pinNum, Mode.output);
     _hardware.digitalWrite(pinNum, value);
   }
 
@@ -73,13 +73,13 @@ class RecordingHardware implements GpioHardware {
 
   @override
   void pinMode(int pinNum, int modeIndex) {
-    var mode = PinMode.values[modeIndex];
+    var mode = Mode.values[modeIndex];
     if (_mode(pinNum) != mode) _states.add(new _PinState(pinNum, mode));
     _hardware.pinMode(pinNum, modeIndex);
   }
 
   void printUsage() {
-    var map = <int, Set<PinMode>>{};
+    var map = <int, Set<Mode>>{};
     print('');
     print('Rev 2 GPIO hardware events');
     for (var message in _events) {
@@ -93,7 +93,7 @@ class RecordingHardware implements GpioHardware {
       print('${pin(pinNum).description}    ${pinMode}');
       var modes = map[pinNum];
       if (modes == null) {
-        modes = new Set<PinMode>();
+        modes = new Set<Mode>();
         map[pinNum] = modes;
       }
       modes.add(pinMode);
@@ -104,7 +104,7 @@ class RecordingHardware implements GpioHardware {
       var separator = '    ';
       var sb = new StringBuffer();
       sb.write(pin(pinNum).description);
-      for (PinMode mode in map[pinNum]) {
+      for (Mode mode in map[pinNum]) {
         sb.write(separator);
         sb.write(mode);
         separator = ', ';
@@ -116,18 +116,18 @@ class RecordingHardware implements GpioHardware {
 
   @override
   void pullUpDnControl(int pinNum, int pud) {
-    _assertMode(pinNum, input);
+    _assertMode(pinNum, Mode.input);
     _hardware.pullUpDnControl(pinNum, pud);
   }
 
   @override
   void pwmWrite(int pinNum, int pulseWidth) {
-    _assertMode(pinNum, pulsed);
+    _assertMode(pinNum, Mode.pulsed);
     _hardware.pwmWrite(pinNum, pulseWidth);
   }
 
   /// Assert that the given pin has the expected mode
-  void _assertMode(int pinNum, PinMode expectedMode) {
+  void _assertMode(int pinNum, Mode expectedMode) {
     var currentMode = _mode(pinNum);
     if (currentMode != expectedMode) {
       throw 'Expected pin $pinNum mode $expectedMode, but was $currentMode';
@@ -135,7 +135,7 @@ class RecordingHardware implements GpioHardware {
   }
 
   /// Return the current mode for the given pin or `null` if not set.
-  PinMode _mode(int pinNum) {
+  Mode _mode(int pinNum) {
     for (int index = _states.length - 1; index >= 0; --index) {
       var state = _states[index];
       if (state.pinNum == pinNum) return state.mode;
@@ -147,7 +147,7 @@ class RecordingHardware implements GpioHardware {
 /// Internal class for tracking the state of a pin
 class _PinState {
   final int pinNum;
-  final PinMode mode;
+  final Mode mode;
 
   _PinState(this.pinNum, this.mode);
 }

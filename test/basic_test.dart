@@ -20,9 +20,9 @@ main() async {
 runTests() {
   // Assert wiringPi consts
   test('basic const', () {
-    expect(input.index, 0);
-    expect(output.index, 1);
-    expect(pulsed.index, 2);
+    expect(Mode.input.index, 0);
+    expect(Mode.output.index, 1);
+    expect(Mode.pulsed.index, 2);
     expect(pullOff.index, 0);
     expect(pullDown.index, 1);
     expect(pullUp.index, 2);
@@ -30,10 +30,10 @@ runTests() {
 
   // Assert pinNum to gpioNum
   test('gpioNum', () {
-    expect(pin(0, input).gpioNum, 17);
-    expect(pin(1, input).gpioNum, 18);
-    expect(pin(2, input).gpioNum, 27);
-    expect(pin(3, input).gpioNum, 22);
+    expect(pin(0, Mode.input).gpioNum, 17);
+    expect(pin(1, Mode.input).gpioNum, 18);
+    expect(pin(2, Mode.input).gpioNum, 27);
+    expect(pin(3, Mode.input).gpioNum, 22);
   });
 
   // Assert that pins cannot be used contrary to their current mode
@@ -46,10 +46,10 @@ runTests() {
         // Expected... fall through
       }
     }
-    expectThrows(() => pin(0, input).value = 1);
-    expectThrows(() => pin(1, output).value);
-    expectThrows(() => pin(1, output).pulseWidth = 10);
-    expectThrows(() => pin(4, output).pull = pullUp);
+    expectThrows(() => pin(0, Mode.input).value = 1);
+    expectThrows(() => pin(1, Mode.output).value);
+    expectThrows(() => pin(1, Mode.output).pulseWidth = 10);
+    expectThrows(() => pin(4, Mode.output).pull = pullUp);
 //
 //      fail('Does wiringPi throw an exception'
 //          ' if PWM is used on a pin other than pin 1?');
@@ -67,17 +67,17 @@ runTests() {
   // Assert that each pin is represented by a single instance
   // regardless of mode.
   test('basic identical', () {
-    var pinA = pin(4, output);
-    expect(pinA.mode, output);
-    var pinB = pin(4, input);
-    expect(pinB.mode, input);
+    var pinA = pin(4, Mode.output);
+    expect(pinA.mode, Mode.output);
+    var pinB = pin(4, Mode.input);
+    expect(pinB.mode, Mode.input);
     expect(identical(pinA, pinB), isTrue);
   });
 
   // Test the pull up and pull down resistor settings
   // on a disconnected pin
   test('basic pull up/down', () {
-    var pin4 = pin(4, input);
+    var pin4 = pin(4, Mode.input);
     expect(pin4.pull, pullOff);
     pin4.pull = pullUp;
     assertValue(pin4, 1);

@@ -15,7 +15,7 @@ main() async {
   }
 
   for (int pinNum = 0; pinNum < 8; ++pinNum) {
-    print('${pin(pinNum, input).value} => ${pin(pinNum, input).description}');
+    print('${pin(pinNum, Mode.input).value} => ${pin(pinNum, Mode.input).description}');
   }
 }
 

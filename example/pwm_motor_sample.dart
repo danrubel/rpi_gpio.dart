@@ -17,8 +17,8 @@ main() async {
   // TODO Remove the need to call this method for initialization
   Gpio.instance;
 
-  var pin1 = pin(1, pulsed);
-  var pin2 = pin(2, pulsed);
+  var pin1 = pin(1, Mode.pulsed);
+  var pin2 = pin(2, Mode.pulsed);
 
   var speed1 = 64;
   var speed2 = 128;
@@ -59,8 +59,8 @@ main() async {
   await _delay(2000);
   pin2.pulseWidth = 0;
 
-  pin1.mode = input;
-  pin2.mode = input;
+  pin1.mode = Mode.input;
+  pin2.mode = Mode.input;
 }
 
 Future _delay(int milliseconds) async {

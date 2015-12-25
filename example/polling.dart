@@ -18,8 +18,8 @@ main() async {
   // TODO Remove the need to call this method for initialization
   Gpio.instance;
 
-  var sensorPin = pin(0, input);
-  var ledPin = pin(1, output);
+  var sensorPin = pin(0, Mode.input);
+  var ledPin = pin(1, Mode.output);
 
   // Poll for changes to pin values
   var previousValue = sensorPin.value;
