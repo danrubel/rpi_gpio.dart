@@ -72,8 +72,8 @@ class MockHardware implements GpioHardware {
     return -1;
   }
 
-    @override
-   int gpioNum(int pinNum) =>
+  @override
+  int gpioNum(int pinNum) =>
       [17, 18, 27, 22, 23, 24, 25, 4, 2, 3, 8, 7, 10, 9, 11, 14, 15][pinNum];
 
   @override
@@ -105,8 +105,10 @@ class MockHardware implements GpioHardware {
   @override
   void pwmWrite(int pinNum, int pulseWidth) {
     // Simulate hardware pwm on pin 1.
-    if (pinNum == 1) digitalWrite(1, pulseWidth > 500 ? 1 : 0);
-    else throw 'pwm not mocked for pin $pinNum';
+    if (pinNum == 1)
+      digitalWrite(1, pulseWidth > 500 ? 1 : 0);
+    else
+      throw 'pwm not mocked for pin $pinNum';
   }
 
   void reset() {
@@ -114,6 +116,18 @@ class MockHardware implements GpioHardware {
     stateChanges = new List<StateChange>();
     disableAllInterrupts();
   }
+
+  @override
+  int physPinToGpio(int pinNum) => [
+        -1, //                                      0
+        -1, -1, 2, -1, 3, -1, 4, 14, -1, 15, //     1 - 10
+        17, 18, 27, -1, 22, 23, -1, 24, 10, -1, // 11 - 20
+        9, 25, 11, 8, -1, 7, 0, 1, 5, -1, //       21 - 30
+        6, 12, 13, -1, 19, 16, 26, 20, -1, 21, //  31 - 40
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 41 - 50
+        28, 29, 30, 31, -1, -1, -1, -1, -1, -1, // 51 - 60
+        -1, -1, -1, -1, -1, -1, -1, -1, //         60+
+      ][pinNum];
 }
 
 class StateChange {

@@ -134,7 +134,7 @@ void doEdge (int gpio_pin_num, int edge)
 // Native Extensions for the Standalone Dart VM
 // https://www.dartlang.org/articles/native-extensions-for-standalone-dart-vm/#appendix-compiling-and-linking-extensions
 // and the example code
-// http://dart.googlecode.com/svn/trunk/dart/samples/sample_extension/ 
+// http://dart.googlecode.com/svn/trunk/dart/samples/sample_extension/
 
 // ===== Native methods ===============================================
 // Each native method must have an entry in either function_list or no_scope_function_list
@@ -189,6 +189,19 @@ void pinMode(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+// Return the GPIO pin number for the given physical pin number
+// int _physPinToGpio(int pinNum) native "physPinToGpio";
+void physPinToGpio(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  Dart_Handle pin_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
+  int64_t pin_num;
+  HandleError(Dart_IntegerToInt64(pin_obj, &pin_num));
+  int value = physPinToGpio(pin_num);
+  Dart_Handle result = HandleError(Dart_NewInteger(value));
+  Dart_SetReturnValue(arguments, result);
+  Dart_ExitScope();
+}
+
 // Sets the pull-up or pull-down resistor mode on the given pin.
 // The internal pull up/down resistors have a value of approximately 50KΩ on the Raspberry Pi.
 // The given pin should be already set as an input.
@@ -204,7 +217,7 @@ void pullUpDnControl (Dart_NativeArguments arguments) {
 }
 
 // Writes the value to the PWM register for the given pin.
-// The Raspberry Pi has one on-board PWM pin, pin 1 (BMC_GPIO 18, Phys 12), 
+// The Raspberry Pi has one on-board PWM pin, pin 1 (BMC_GPIO 18, Phys 12),
 // and the range is 0-1024.
 void pwmWrite(Dart_NativeArguments arguments) {
   Dart_EnterScope();
@@ -366,6 +379,7 @@ FunctionLookup function_list[] = {
   {"enableInterrupt", enableInterrupt},
   {"initInterrupts", initInterrupts},
   {"pinMode", pinMode},
+  {"physPinToGpio", physPinToGpio},
   {"pullUpDnControl", pullUpDnControl},
   {"pwmWrite", pwmWrite},
   {"wpiPinToGpio", wpiPinToGpio},

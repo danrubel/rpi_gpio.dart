@@ -35,6 +35,9 @@ class RpiHardware implements GpioHardware {
   void pinMode(int pinNum, int mode) native "pinMode";
 
   @override
+  int physPinToGpio(int pinNum) native "physPinToGpio";
+
+  @override
   void pullUpDnControl(int pinNum, int pud) native "pullUpDnControl";
 
   @override

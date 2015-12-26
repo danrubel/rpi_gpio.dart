@@ -9,11 +9,12 @@ class NoOpHardware extends GpioHardware {
   @override void digitalWrite(int pinNum, int value) {}
   @override void disableAllInterrupts() {}
   @override int enableInterrupt(int pinNum) => -1;
+  @override int gpioNum(int pinNum) => -1;
   @override void initInterrupts(SendPort port) {}
+  @override  int physPinToGpio(int pinNum) => -1;
   @override void pinMode(int pinNum, int mode) {}
   @override void pullUpDnControl(int pinNum, int pud) {}
   @override void pwmWrite(int pinNum, int pulseWidth) {}
-  @override int gpioNum(int pinNum) => -1;
 }
 
 /// Records modes used with the GPIO hardware,
@@ -70,6 +71,9 @@ class RecordingHardware implements GpioHardware {
       });
     _hardware.initInterrupts(_hardwarePort.sendPort);
   }
+
+  @override
+  int physPinToGpio(int pinNum) => _hardware.physPinToGpio(pinNum);
 
   @override
   void pinMode(int pinNum, int modeIndex) {

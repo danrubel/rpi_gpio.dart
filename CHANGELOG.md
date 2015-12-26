@@ -4,6 +4,7 @@
  * BREAKING CHANGES to match the [fletch gpio package](https://github.com/dart-lang/fletch/blob/master/pkg/gpio/lib/gpio.dart)
  * Renamed PinMode to Mode
  * Rename GpioException GPIOException
+ * Add Pin.physNum
  * Removed top level input, output, pulsed const
  * Removed Gpio.pin method in favor of top level pin function
  * Move classes similar to fletch gpio package into gpio.dart library

@@ -13,35 +13,35 @@ const PinPull pullDown = PinPull.down;
 const PinPull pullOff = PinPull.off;
 const PinPull pullUp = PinPull.up;
 
-/// Indexed by pin number, these strings are used to build
-/// human readable description of known Raspberry Pi rev 2 GPIO pins.
+/// Indexed by pin number, these strings represent the additional capability
+/// of a given GPIO pin and are used to buildv human readable description
+/// of known Raspberry Pi rev 2 GPIO pins.
 /// See http://wiringpi.com/pins/special-pin-functions/
 const List<String> _descriptionSuffix = const [
-  'Phys 11)',
-  'Phys 12, PMW)',
-  'Phys 13)',
-  'Phys 15)',
-  'Phys 16)',
-  'Phys 18)',
-  'Phys 22)',
-  'Phys 7,  Clock)',
-  'Phys 3,  I2C SDA0/1)',
-  'Phys 5,  I2C SCL0/1)',
-  'Phys 24, SPI CE0)',
-  'Phys 26, SPI CE1)',
-  'Phys 19, SPI MOSI)',
-  'Phys 21, SPI MISO)',
-  'Phys 23, SPI SCLK)',
-  'Phys 8,  UART TxD, Console)',
-  'Phys 10, UART RxD, Console)',
-  'Phys P5-3)',
-  'Phys P5-4)',
-  'Phys P5-5)',
-  'Phys P5-6)',
+  '',
+  'PMW',
+  '',
+  '',
+  '',
+  '',
+  '',
+  'Clock',
+  'I2C SDA0/1',
+  'I2C SCL0/1',
+  'SPI CE0',
+  'SPI CE1',
+  'SPI MOSI',
+  'SPI MISO',
+  'SPI SCLK',
+  'UART TxD, Console',
+  'UART RxD, Console',
 ];
 
 /// An internal cache of currently defined pins indexed by wiringPi pin #
 List<Pin> _pins = <Pin>[];
+
+/// A mapping of GPIO pin number to physical pin number.
+Map<int, int> _gpioToPhysNum;
 
 /// Return [true] if this is running on a Raspberry Pi.
 bool get isRaspberryPi {
@@ -75,6 +75,20 @@ Pin pin(int pinNum, [Mode mode]) {
     pin.mode = mode;
   }
   return pin;
+}
+
+/// Return a mapping of wiringPi pin number to physical pin number
+Map<int, int> get gpioToPhysNum {
+  if (_gpioToPhysNum == null) {
+    _gpioToPhysNum = <int, int>{};
+    for (int physNum = 0; physNum < 64; ++physNum) {
+      int gpioNum = Gpio._hardware.physPinToGpio(physNum);
+      if (gpioNum != -1) {
+        _gpioToPhysNum[gpioNum] = physNum;
+      }
+    }
+  }
+  return _gpioToPhysNum;
 }
 
 /// [Gpio] provides access to the General Purpose I/O (GPIO) pins.
@@ -195,6 +209,9 @@ abstract class GpioHardware {
   /// which can be any of [Mode] (e.g. [Mode.input.index]).
   void pinMode(int pinNum, int mode);
 
+  /// Return the GPIO pin number for the given physical pin.
+  int physPinToGpio(int pinNum);
+
   /// Set the internal pull up/down resistor attached to the given pin,
   /// which can be any of [PinPull] (e.g. [PinPull.up.index]).
   /// The pin should be set to [Mode.input] before calling this method.
@@ -232,9 +249,14 @@ class Pin {
 
   /// Return a human readable description of this pin
   String get description {
-    return pinNum >= 0 && pinNum <= _descriptionSuffix.length
-        ? 'Pin $pinNum (BMC_GPIO $gpioNum, ${_descriptionSuffix[pinNum]}'
-        : 'Pin $pinNum';
+    String suffix;
+    if (pinNum >= 0 && pinNum <= _descriptionSuffix.length) {
+      suffix = _descriptionSuffix[pinNum];
+      if (suffix.length > 0) suffix = ', $suffix';
+    } else {
+      suffix = '';
+    }
+    return 'Pin $pinNum (BMC_GPIO $gpioNum, Phys $physNum$suffix)';
   }
 
   /// Return a stream of pin events indicating state changes.
@@ -282,6 +304,11 @@ class Pin {
     }
   }
 
+  /// Return the physical pin number for the given GPIO pin
+  int get physNum {
+    return gpioToPhysNum[gpioNum];
+  }
+
   /// Return the state of the pin's pull up/down resistor
   PinPull get pull => _pull;
 
@@ -309,7 +336,8 @@ class Pin {
 
   /// Return the digital value (0 = low, 1 = high) for this pin.
   int get value {
-    if (mode != Mode.input) throw new GPIOException.invalidCall(pinNum, 'value');
+    if (mode != Mode.input)
+      throw new GPIOException.invalidCall(pinNum, 'value');
     return Gpio._hardware.digitalRead(pinNum);
   }
 

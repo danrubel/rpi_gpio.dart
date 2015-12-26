@@ -28,12 +28,25 @@ runTests() {
     expect(pullUp.index, 2);
   });
 
+  // Assert physical pin mapping
+  test('physNum', () {
+    expect(hardware.physPinToGpio(1), -1); // 3.3 V
+    expect(hardware.physPinToGpio(2), -1); // 5 V
+    expect(hardware.physPinToGpio(11), 17); // pin 0 gpio 17
+    expect(hardware.physPinToGpio(12), 18); // pin 1 gpio 18
+    expect(hardware.physPinToGpio(16), 23); // pin 4 gpio 23
+    expect(pin(0, Mode.input).physNum, 11);
+    expect(pin(1, Mode.input).physNum, 12);
+    expect(pin(4, Mode.input).physNum, 16);
+  });
+
   // Assert pinNum to gpioNum
   test('gpioNum', () {
     expect(pin(0, Mode.input).gpioNum, 17);
     expect(pin(1, Mode.input).gpioNum, 18);
     expect(pin(2, Mode.input).gpioNum, 27);
     expect(pin(3, Mode.input).gpioNum, 22);
+    expect(pin(4, Mode.input).gpioNum, 23);
   });
 
   // Assert that pins cannot be used contrary to their current mode
@@ -56,9 +69,6 @@ runTests() {
 //
 //      fail('Does wiringPi throw an exception'
 //          ' if clock mode is used on a pin other than pin X?');
-//
-//      fail('Does wiringPi throw an exception'
-//          ' if value read from output pin or vise versa?');
 //
 //      fail('Does wiringPi throw an exception'
 //          ' if pin is set to an invalid mode?');
