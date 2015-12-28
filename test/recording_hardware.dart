@@ -126,7 +126,7 @@ class RecordingHardware implements GpioHardware {
 
   @override
   void pwmWrite(int pinNum, int pulseWidth) {
-    _assertMode(pinNum, Mode.pulsed);
+    _assertMode(pinNum, Mode.output);
     _hardware.pwmWrite(pinNum, pulseWidth);
   }
 

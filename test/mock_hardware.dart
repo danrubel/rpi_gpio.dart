@@ -1,4 +1,4 @@
-library test.mock.hardware;
+library test.rpi_gpio.mock;
 
 import 'dart:isolate';
 

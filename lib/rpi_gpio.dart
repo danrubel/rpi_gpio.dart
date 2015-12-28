@@ -5,7 +5,6 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:rpi_gpio/gpio.dart';
-import 'package:rpi_gpio/rpi_pwm.dart';
 
 export 'package:rpi_gpio/gpio.dart';
 
@@ -117,16 +116,12 @@ class Gpio {
     return _instance;
   }
 
-  /// For emulating pulse width modulation on pins other than pin 1.
-  SoftwarePWM _softPwm;
-
   /// The port on which interrupt events are received
   /// or `null` if not yet initialized.
   ReceivePort _interruptEventPort;
 
   Gpio._() {
     if (_hardware == null) throw new GPIOException('Gpio.hardware must be set');
-    _softPwm = new SoftwarePWM(_hardware);
   }
 
   /// If all pin event streams have been canceled/closed
@@ -220,7 +215,7 @@ abstract class GpioHardware {
   /// Set the pulse width for the given pin.
   /// The pulse width is a number between 0 and 1024 representing the amount
   /// of time out of 1024 that the pin outputs a high value rather than ground.
-  /// The pin should be set to [Mode.pulsed] before calling this method.
+  /// The pin should be set to [Mode.output] before calling this method.
   void pwmWrite(int pinNum, int pulseWidth);
 }
 
@@ -230,7 +225,7 @@ class Pin {
   /// The wiringPi pin number.
   final int pinNum;
 
-  /// The pin mode: [Mode.input], [Mode.output], [Mode.pulsed]
+  /// The pin mode: [Mode.input], [Mode.output], [Mode.other]
   Mode _mode;
 
   /// The state of the pin's pull up/down resistor
@@ -283,25 +278,18 @@ class Pin {
   /// Return the GPIO number for this pin
   int get gpioNum => Gpio._hardware.gpioNum(pinNum);
 
-  /// Return the mode ([Mode.input], [Mode.output], [Mode.pulsed]) for this pin.
+  /// Return the mode ([Mode.input], [Mode.output], [Mode.other]) for this pin.
   Mode get mode => _mode;
 
-  /// Set the mode ([Mode.input], [Mode.output], [Mode.pulsed]) for this pin.
+  /// Set the mode ([Mode.input] or [Mode.output]) for this pin.
   void set mode(Mode mode) {
-    if (_mode == Mode.pulsed && mode != Mode.pulsed) {
-      // Turn off software simulated pwm
-      Gpio._instance._softPwm.pulseWidth(pinNum, null);
-    }
     if (_mode == Mode.input && mode != Mode.input && _events != null)
       throw new GPIOException(
           'Must cancel event stream subscription before changing mode', pinNum);
+    if (mode == Mode.other)
+      throw new GPIOException('Cannot set mode other', pinNum);
     _mode = mode;
-    if (pinNum != 1 && mode == Mode.pulsed) {
-      // Simulate pulse width modulation using standard output mode
-      Gpio._hardware.pinMode(pinNum, Mode.output.index);
-    } else {
-      Gpio._hardware.pinMode(pinNum, mode.index);
-    }
+    Gpio._hardware.pinMode(pinNum, mode.index);
   }
 
   /// Return the physical pin number for the given GPIO pin
@@ -323,15 +311,13 @@ class Pin {
 
   /// Set the pulse width (0 - 1024) for the given pin.
   /// The Raspberry Pi has one on-board PWM pin, pin 1 (BMC_GPIO 18, Phys 12).
-  /// PWM on all other pins must be simulated via software.
+  /// PWM on all other pins is not directly supported.
   void set pulseWidth(int pulseWidth) {
-    if (mode != Mode.pulsed)
+    if (mode != Mode.output)
       throw new GPIOException.invalidCall(pinNum, 'pulseWidth');
-    if (pinNum == 1) {
-      Gpio._hardware.pwmWrite(pinNum, pulseWidth);
-    } else {
-      Gpio._instance._softPwm.pulseWidth(pinNum, pulseWidth);
-    }
+    if (pinNum != 1)
+      throw new GPIOException('pulseWidth only supported on pin 1');
+    Gpio._hardware.pwmWrite(pinNum, pulseWidth);
   }
 
   /// Return the digital value (0 = low, 1 = high) for this pin.

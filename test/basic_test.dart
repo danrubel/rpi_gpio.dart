@@ -22,7 +22,7 @@ runTests() {
   test('basic const', () {
     expect(Mode.input.index, 0);
     expect(Mode.output.index, 1);
-    expect(Mode.pulsed.index, 2);
+    expect(Mode.other.index, 2);
     expect(pullOff.index, 0);
     expect(pullDown.index, 1);
     expect(pullUp.index, 2);
@@ -59,10 +59,26 @@ runTests() {
         // Expected... fall through
       }
     }
+
+    // Cannot set value on input pin
     expectThrows(() => pin(0, Mode.input).value = 1);
+
+    // Cannot set pulseWidth of input pin
+    expectThrows(() => pin(1, Mode.input).pulseWidth = 10);
+
+    // Pulse width only support on Pin 1
+    expectThrows(() => pin(3, Mode.output).pulseWidth = 10);
+
+    // Cannot get value of output pin
     expectThrows(() => pin(1, Mode.output).value);
-    expectThrows(() => pin(1, Mode.output).pulseWidth = 10);
+
+    // Cannot set pull up for output pin
     expectThrows(() => pin(4, Mode.output).pull = pullUp);
+    expectThrows(() => pin(4, Mode.output).pull = pullDown);
+    expectThrows(() => pin(4, Mode.output).pull = pullOff);
+
+    // Cannot set other mode
+    expectThrows(() => pin(4, Mode.other));
 //
 //      fail('Does wiringPi throw an exception'
 //          ' if PWM is used on a pin other than pin 1?');

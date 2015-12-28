@@ -5,6 +5,8 @@ import 'dart:async';
 import 'package:rpi_gpio/rpi_hardware.dart';
 import 'package:rpi_gpio/rpi_gpio.dart';
 
+/// Obsolete Example :: PWM only supported on Pin #1
+
 /// Drive a motor connected to a DRV8833 circuit which in turn is connected
 /// to pins 1 and 2. Vary the motor speed using pulse width modulation.
 /// Since the RPi only has one hardware pin capable of pwm,
@@ -17,8 +19,8 @@ main() async {
   // TODO Remove the need to call this method for initialization
   Gpio.instance;
 
-  var pin1 = pin(1, Mode.pulsed);
-  var pin2 = pin(2, Mode.pulsed);
+  var pin1 = pin(1, Mode.output);
+  var pin2 = pin(2, Mode.output);
 
   var speed1 = 64;
   var speed2 = 128;

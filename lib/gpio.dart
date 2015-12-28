@@ -16,5 +16,9 @@ class GPIOException {
 }
 
 /// A GPIO pin can be set to receive [input] and interrupts, have a particular
-/// [output] value, or be [pulsed] (Pulse Width Modulation or PWM).
-enum Mode { input, output, pulsed }
+/// [output] value or pulseWidth, or be in some [other] mode.
+enum Mode { input, output,
+  /// GPIO has functions other than [input] and [output]. Most GPIO pins have
+  /// several special functions, so when in that mode this value can be
+  /// returned. This value cannot be used when setting the mode.
+  other }
