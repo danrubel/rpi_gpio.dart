@@ -107,15 +107,6 @@ class MockHardware implements RpiGPIO {
         -1, -1, -1, -1, -1, -1, -1, -1, //         60+
       ][pinNum];
 
-  @override
-  void pwmWrite(int pinNum, int pulseWidth) {
-    // Simulate hardware pwm on pin 1.
-    if (pinNum == 1)
-      setPin(1, pulseWidth > 500);
-    else
-      throw 'pwm not mocked for pin $pinNum';
-  }
-
   void reset() {
     values = <int>[0, 0, 0, 0, null];
     stateChanges = new List<StateChange>();
@@ -135,6 +126,15 @@ class MockHardware implements RpiGPIO {
     } else if (pinNum != 0 && pinNum != 2) {
       throw 'pull up/down not mocked for pin $pinNum';
     }
+  }
+
+  @override
+  void setPulseWidth(int pinNum, int pulseWidth) {
+    // Simulate hardware pwm on pin 1.
+    if (pinNum == 1)
+      setPin(1, pulseWidth > 500);
+    else
+      throw 'pwm not mocked for pin $pinNum';
   }
 
   @override

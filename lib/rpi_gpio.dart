@@ -182,16 +182,16 @@ abstract class RpiGPIO implements GPIO {
   /// Return the GPIO pin number for the given physical pin.
   int physPinToGpio(int pinNum);
 
-  /// Set the pulse width for the given pin.
-  /// The pulse width is a number between 0 and 1024 representing the amount
-  /// of time out of 1024 that the pin outputs a high value rather than ground.
-  /// The pin should be set to [Mode.output] before calling this method.
-  void pwmWrite(int pinNum, int pulseWidth);
-
   /// Set the internal pull up/down resistor attached to the given pin,
   /// which can be any of [Pull] (e.g. [Pull.up.index]).
   /// The pin should be set to [Mode.input] before calling this method.
   void setPull(int pinNum, Pull pull);
+
+  /// Set the pulse width for the given pin.
+  /// The pulse width is a number between 0 and 1024 representing the amount
+  /// of time out of 1024 that the pin outputs a high value rather than ground.
+  /// The pin should be set to [Mode.output] before calling this method.
+  void setPulseWidth(int pinNum, int pulseWidth);
 
   /// Sets the interrupt trigger for [pinNum] to [trigger].
   /// Throws an exception if [initInterrupts] has not been called
@@ -282,7 +282,7 @@ class Pin {
       throw new GPIOException.invalidCall(pinNum, 'pulseWidth');
     if (pinNum != 1)
       throw new GPIOException('pulseWidth only supported on pin 1');
-    Gpio._hardware.pwmWrite(pinNum, pulseWidth);
+    Gpio._hardware.setPulseWidth(pinNum, pulseWidth);
   }
 
   /// Return the digital value (0 = low, 1 = high) for this pin.

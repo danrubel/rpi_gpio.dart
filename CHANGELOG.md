@@ -14,10 +14,11 @@
  * Move classes similar to fletch gpio package into gpio.dart library
  * Renamed PinMode to Mode
  * Renamed PinPull to Pull
- * Renamed GpioException GPIOException
- * Renamed GpioHardware to RpiGPIO
- * Renamed RpiHardware  to WiringPiGPIO
+ * Renamed GpioException           to GPIOException
+ * Renamed GpioHardware            to RpiGPIO
+ * Renamed RpiHardware             to WiringPiGPIO
  * Renamed RpiGPIO.pullUpDnControl to setPull
+ * Renamed RpiGPIO.pwmWrite        to setPulseWidth
  * Changed Pin.events from getter to a method that takes an optional parameter
  * Add Pin.physNum
  * Add Mode.other to match fletch gpio package

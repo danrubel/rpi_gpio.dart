@@ -10,13 +10,13 @@ class NoOpHardware extends RpiGPIO {
   @override void setMode(int pin, Mode mode) {}
   @override void setPin(int pin, bool value) {}
   @override void setPull(int pinNum, Pull pull) {}
+  @override void setPulseWidth(int pinNum, int pulseWidth) {}
   @override void setTrigger(int pin, Trigger trigger) {}
   // ========== WiringPi Specific API ======================
   @override void disableAllInterrupts() {}
   @override int gpioNum(int pinNum) => -1;
   @override void initInterrupts(SendPort port) {}
   @override int physPinToGpio(int pinNum) => -1;
-  @override void pwmWrite(int pinNum, int pulseWidth) {}
 }
 
 /// Records modes used with the GPIO hardware,
@@ -139,9 +139,9 @@ class RecordingHardware implements RpiGPIO {
   }
 
   @override
-  void pwmWrite(int pinNum, int pulseWidth) {
+  void setPulseWidth(int pinNum, int pulseWidth) {
     _assertMode(pinNum, Mode.output);
-    _hardware.pwmWrite(pinNum, pulseWidth);
+    _hardware.setPulseWidth(pinNum, pulseWidth);
   }
 
   /// Assert that the given pin has the expected mode

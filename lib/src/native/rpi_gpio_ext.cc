@@ -224,7 +224,8 @@ void setPull(Dart_NativeArguments arguments) {
 // Writes the value to the PWM register for the given pin.
 // The Raspberry Pi has one on-board PWM pin, pin 1 (BMC_GPIO 18, Phys 12),
 // and the range is 0-1024.
-void pwmWrite(Dart_NativeArguments arguments) {
+// void setPulseWidth(int pinNum, int pulseWidth) native "setPulseWidth";
+void setPulseWidth(Dart_NativeArguments arguments) {
   Dart_EnterScope();
   Dart_Handle pin_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
   Dart_Handle pulseWidth_obj = HandleError(Dart_GetNativeArgument(arguments, 2));
@@ -401,8 +402,8 @@ FunctionLookup function_list[] = {
   {"initInterrupts", initInterrupts},
   {"pinMode", pinMode},
   {"physPinToGpio", physPinToGpio},
-  {"pwmWrite", pwmWrite},
   {"setPull", setPull},
+  {"setPulseWidth", setPulseWidth},
   {"setTrigger", setTrigger},
   {"wpiPinToGpio", wpiPinToGpio},
   {NULL, NULL}

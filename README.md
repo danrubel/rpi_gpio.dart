@@ -10,8 +10,8 @@ rpi_gpio is a Dart library for accessing the Raspberry Pi GPIO pins.
 
  * [__Gpio__](lib/rpi_gpio.dart) provides a high level API for accessing
    the various General Purpose I/O pins on the Raspberry Pi.
- 
- * [__RpiHardware__](lib/rpi_hardware.dart) provides a low level API
+
+ * [__WiringPiGPIO__](lib/wiringpi_gpio.dart) provides a low level API
    for accessing the GPIO pins.
 
 ## Setup
@@ -38,7 +38,7 @@ the rpi_gpio package) run the following command to build the native library
 
 [pub global activate](https://www.dartlang.org/tools/pub/cmd/pub-global.html#activating-a-package)
 makes the Dart scripts in the rpi_gpio/bin directory runnable
-from the command line. 
+from the command line.
 [pub global run](https://www.dartlang.org/tools/pub/cmd/pub-global.html#running-a-script)
 rpi_gpio:build_lib runs the [rpi_gpio/bin/build_lib.dart](bin/build_lib.dart)
 program which in turn calls the [build_lib](lib/src/native/build_lib) script
@@ -56,11 +56,10 @@ to compile the native librpi_gpio_ext.so library for the rpi_gpio package.
  * A [blinking LED](example/blink.dart) example
    and a [motor driver](example/pwm_motor_sample.dart) example
    demonstrate using the [high level GPIO library](lib/rpi_gpio.dart).
- 
+
  * A second [blinking LED](example/blink_hardware_api.dart)
    demonstrates using the [low level hardware API](lib/rpi_hardware.dart).
 
  * The value of GPIO pins can be tracked over time
    via [interrupts](example/interrupts.dart)
    or [polling](example/polling.dart).
-
