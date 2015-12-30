@@ -2,6 +2,7 @@ library test.hardware.blink;
 
 import 'dart:async';
 
+import 'package:rpi_gpio/gpio.dart';
 import 'package:rpi_gpio/wiringpi_gpio.dart';
 
 /// Low level calls to blink an LED
@@ -10,15 +11,14 @@ import 'package:rpi_gpio/wiringpi_gpio.dart';
 /// Typically, users access the GPIO pins via package:rpi_gpio/rpi_gpio.dart
 /// as shown in the blink.dart rather than using this lower level API.
 main() async {
-
   // Directly access the hardware API
   var hardware = new WiringPiGPIO();
 
-  hardware.pinMode(1, 1); // pin 1 output
+  hardware.setMode(1, Mode.output);
   for (int count = 0; count < 5; ++count) {
-    hardware.digitalWrite(1, 1);
+    hardware.setPin(1, true);
     await _delay(1000);
-    hardware.digitalWrite(1, 0);
+    hardware.setPin(1, false);
     await _delay(1000);
   }
 }

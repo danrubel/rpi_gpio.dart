@@ -3,6 +3,7 @@ library test.rpi_gpio.basic;
 import 'package:rpi_gpio/rpi_gpio.dart';
 import 'package:test/test.dart';
 
+import 'mock_hardware.dart';
 import 'test_util.dart';
 
 // Current test hardware configuration:
@@ -26,27 +27,6 @@ runTests() {
     expect(Pull.off.index, 0);
     expect(Pull.down.index, 1);
     expect(Pull.up.index, 2);
-  });
-
-  // Assert physical pin mapping
-  test('physNum', () {
-    expect(hardware.physPinToGpio(1), -1); // 3.3 V
-    expect(hardware.physPinToGpio(2), -1); // 5 V
-    expect(hardware.physPinToGpio(11), 17); // pin 0 gpio 17
-    expect(hardware.physPinToGpio(12), 18); // pin 1 gpio 18
-    expect(hardware.physPinToGpio(16), 23); // pin 4 gpio 23
-    expect(pin(0, Mode.input).physNum, 11);
-    expect(pin(1, Mode.input).physNum, 12);
-    expect(pin(4, Mode.input).physNum, 16);
-  });
-
-  // Assert pinNum to gpioNum
-  test('gpioNum', () {
-    expect(pin(0, Mode.input).gpioNum, 17);
-    expect(pin(1, Mode.input).gpioNum, 18);
-    expect(pin(2, Mode.input).gpioNum, 27);
-    expect(pin(3, Mode.input).gpioNum, 22);
-    expect(pin(4, Mode.input).gpioNum, 23);
   });
 
   // Assert that pins cannot be used contrary to their current mode
@@ -115,5 +95,19 @@ runTests() {
     expect(pin4.pull, Pull.down);
     pin4.pull = Pull.off;
     expect(pin4.pull, Pull.off);
+  });
+
+  test('description', () {
+    if (hardware is MockHardware) {
+      expect(pin(0, Mode.input).description, 'Pin 0');
+      expect(pin(1, Mode.input).description, 'Pin 1');
+      // expect(hardware.description(0), 'Pin 0');
+      // expect(hardware.description(1), 'Pin 1');
+    } else {
+      expect(hardware.description(0), 'Pin 0 (BMC_GPIO 17, Phys 11)');
+      expect(hardware.description(1), 'Pin 1 (BMC_GPIO 18, Phys 12, PWM)');
+      expect(pin(0, Mode.input).description, hardware.description(0));
+      expect(pin(1, Mode.input).description, hardware.description(1));
+    }
   });
 }

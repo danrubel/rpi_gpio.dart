@@ -11,6 +11,7 @@
  * Removed top level input, output, pulsed const
  * Removed top level pullup, pulldown, pullOff const
  * Removed Gpio.pin method in favor of top level pin function
+ * Removed RpiGPIO.gpioNum and Pin.gpioNum in favor of RpiGPIO.description
  * Move classes similar to fletch gpio package into gpio.dart library
  * Renamed PinMode to Mode
  * Renamed PinPull to Pull
@@ -21,9 +22,9 @@
  * Renamed RpiGPIO.pwmWrite        to setPulseWidth
  * Changed Pin.events from getter to a method that takes an optional parameter
  * Changed Pin.value and PinEvent.value from int to bool
- * Add Pin.physNum
- * Add Mode.other to match fletch gpio package
- * Add abstract GPIO class to match fletch gpio package
+ * Added optional RpiGPIO.description method
+ * Added Mode.other to match fletch gpio package
+ * Added abstract GPIO class to match fletch gpio package
 
 ## 0.2.2
 

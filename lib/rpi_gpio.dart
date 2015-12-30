@@ -8,35 +8,8 @@ import 'package:rpi_gpio/gpio.dart';
 
 export 'package:rpi_gpio/gpio.dart';
 
-/// Indexed by pin number, these strings represent the additional capability
-/// of a given GPIO pin and are used to build human readable description
-/// of known Raspberry Pi rev 2 GPIO pins.
-/// See http://wiringpi.com/pins/special-pin-functions/
-const List<String> _descriptionSuffix = const [
-  '',
-  'PMW',
-  '',
-  '',
-  '',
-  '',
-  '',
-  'Clock',
-  'I2C SDA0/1',
-  'I2C SCL0/1',
-  'SPI CE0',
-  'SPI CE1',
-  'SPI MOSI',
-  'SPI MISO',
-  'SPI SCLK',
-  'UART TxD, Console',
-  'UART RxD, Console',
-];
-
 /// An internal cache of currently defined pins indexed by wiringPi pin #
 List<Pin> _pins = <Pin>[];
-
-/// A mapping of GPIO pin number to physical pin number.
-Map<int, int> _gpioToPhysNum;
 
 /// Return [true] if this is running on a Raspberry Pi.
 bool get isRaspberryPi {
@@ -70,20 +43,6 @@ Pin pin(int pinNum, [Mode mode]) {
     pin.mode = mode;
   }
   return pin;
-}
-
-/// Return a mapping of wiringPi pin number to physical pin number
-Map<int, int> get gpioToPhysNum {
-  if (_gpioToPhysNum == null) {
-    _gpioToPhysNum = <int, int>{};
-    for (int physNum = 0; physNum < 64; ++physNum) {
-      int gpioNum = Gpio._hardware.physPinToGpio(physNum);
-      if (gpioNum != -1) {
-        _gpioToPhysNum[gpioNum] = physNum;
-      }
-    }
-  }
-  return _gpioToPhysNum;
 }
 
 /// [Gpio] provides access to the General Purpose I/O (GPIO) pins.
@@ -157,14 +116,23 @@ class Gpio {
 
 /// API used by [Gpio] for accessing the underlying hardware.
 abstract class RpiGPIO implements GPIO {
+
+  /// Bit mask used for extracting the pin # from the interrupt event.
+  /// See [initInterrupts].
   static final pinNumMask = 0x7F;
+
+  /// Bit mask used for extracting the value from the interrupt event.
+  /// See [initInterrupts].
   static final pinValueMask = 0x80;
+
+  /// Return a short one line human readable description of the pin, including
+  /// the GPIO #, physical pin #, and special pin function as appropriate.
+  /// This is an OPTIONAL method and callers should be prepared to handle
+  /// a `null` return value and exceptions such as [NoSuchMethodError].
+  String description(int pinNum);
 
   /// Disable the background interrupt listener.
   void disableAllInterrupts();
-
-  /// Return the GPIO number for the given WiringPi pin number.
-  int gpioNum(int pinNum);
 
   /// Initialize the background interrupt listener.
   /// Once called, interrupt events will be sent to [port].
@@ -178,9 +146,6 @@ abstract class RpiGPIO implements GPIO {
   ///
   /// Throws an exception if interrupts have already been initialized.
   void initInterrupts(SendPort port);
-
-  /// Return the GPIO pin number for the given physical pin.
-  int physPinToGpio(int pinNum);
 
   /// Set the internal pull up/down resistor attached to the given pin,
   /// which can be any of [Pull] (e.g. [Pull.up.index]).
@@ -225,23 +190,12 @@ class Pin {
 
   /// Return a human readable description of this pin
   String get description {
-    String suffix;
-    if (pinNum >= 0 && pinNum <= _descriptionSuffix.length) {
-      suffix = _descriptionSuffix[pinNum];
-      if (suffix.length > 0) suffix = ', $suffix';
-    } else {
-      suffix = '';
-    }
     try {
-      return 'Pin $pinNum (BMC_GPIO $gpioNum, Phys $physNum$suffix)';
-    } on NoSuchMethodError {
-      // Fall through
+      return Gpio._hardware.description(pinNum);
+    } catch (_) {
+      return 'Pin $pinNum';
     }
-    return 'Pin $pinNum (BMC_GPIO ??, Phys ??$suffix)';
   }
-
-  /// Return the GPIO number for this pin
-  int get gpioNum => Gpio._hardware.gpioNum(pinNum);
 
   /// Return the mode ([Mode.input], [Mode.output], [Mode.other]) for this pin.
   Mode get mode => _mode;
@@ -255,11 +209,6 @@ class Pin {
       throw new GPIOException('Cannot set mode other', pinNum);
     _mode = mode;
     Gpio._hardware.setMode(pinNum, mode);
-  }
-
-  /// Return the physical pin number for the given GPIO pin
-  int get physNum {
-    return gpioToPhysNum[gpioNum];
   }
 
   /// Return the state of the pin's pull up/down resistor

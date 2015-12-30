@@ -6,17 +6,15 @@ import 'package:rpi_gpio/rpi_gpio.dart';
 
 class NoOpHardware extends RpiGPIO {
   @override int get pins => 0;
+  @override String description(int pinNum) => 'Pin $pinNum';
+  @override void disableAllInterrupts() {}
   @override bool getPin(int pin) => false;
+  @override void initInterrupts(SendPort port) {}
   @override void setMode(int pin, Mode mode) {}
   @override void setPin(int pin, bool value) {}
   @override void setPull(int pinNum, Pull pull) {}
   @override void setPulseWidth(int pinNum, int pulseWidth) {}
   @override void setTrigger(int pin, Trigger trigger) {}
-  // ========== WiringPi Specific API ======================
-  @override void disableAllInterrupts() {}
-  @override int gpioNum(int pinNum) => -1;
-  @override void initInterrupts(SendPort port) {}
-  @override int physPinToGpio(int pinNum) => -1;
 }
 
 /// Records modes used with the GPIO hardware,
@@ -39,6 +37,9 @@ class RecordingHardware implements RpiGPIO {
 
   @override
   int get pins => _hardware.pins;
+
+  @override
+  String description(int pinNum) => _hardware.description(pinNum);
 
   @override
   bool getPin(int pinNum) {
@@ -77,9 +78,6 @@ class RecordingHardware implements RpiGPIO {
   }
 
   @override
-  int gpioNum(int pinNum) => _hardware.gpioNum(pinNum);
-
-  @override
   void initInterrupts(SendPort port) {
     if (_clientPort != null) throw 'initInterrupts already called';
     _clientPort = port;
@@ -92,9 +90,6 @@ class RecordingHardware implements RpiGPIO {
       });
     _hardware.initInterrupts(_hardwarePort.sendPort);
   }
-
-  @override
-  int physPinToGpio(int pinNum) => _hardware.physPinToGpio(pinNum);
 
   void printUsage() {
     var map = <int, Set<Mode>>{};
