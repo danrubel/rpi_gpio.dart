@@ -61,7 +61,7 @@ runTests() {
     }
 
     // Cannot set value on input pin
-    expectThrows(() => pin(0, Mode.input).value = 1);
+    expectThrows(() => pin(0, Mode.input).value = true);
 
     // Cannot set pulseWidth of input pin
     expectThrows(() => pin(1, Mode.input).pulseWidth = 10);
@@ -106,12 +106,12 @@ runTests() {
     var pin4 = pin(4, Mode.input);
     expect(pin4.pull, Pull.off);
     pin4.pull = Pull.up;
-    assertValue(pin4, 1);
+    assertValue(pin4, true);
     expect(pin4.pull, Pull.up);
     pin4.pull = null;
     expect(pin4.pull, Pull.off);
     pin4.pull = Pull.down;
-    assertValue(pin4, 0);
+    assertValue(pin4, false);
     expect(pin4.pull, Pull.down);
     pin4.pull = Pull.off;
     expect(pin4.pull, Pull.off);

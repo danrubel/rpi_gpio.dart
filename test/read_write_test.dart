@@ -25,21 +25,21 @@ runTests() {
     Pin ledPin;
 
     testWriteRead() {
-      assertValue(sensorPin, 0);
+      assertValue(sensorPin, false);
       for (int count = 0; count < 3; ++count) {
-        ledPin.value = 1;
-        assertValue(sensorPin, 1);
-        ledPin.value = 0;
-        assertValue(sensorPin, 0);
+        ledPin.value = true;
+        assertValue(sensorPin, true);
+        ledPin.value = false;
+        assertValue(sensorPin, false);
       }
     }
 
     sensorPin = pin(0, Mode.input)..pull = Pull.down;
-    ledPin = pin(1, Mode.output)..value = 0;
+    ledPin = pin(1, Mode.output)..value = false;
     testWriteRead();
 
     sensorPin = pin(2, Mode.input)..pull = Pull.down;
-    ledPin = pin(3, Mode.output)..value = 0;
+    ledPin = pin(3, Mode.output)..value = false;
     testWriteRead();
   });
 }

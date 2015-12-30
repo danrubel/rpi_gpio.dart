@@ -18,9 +18,9 @@ main() async {
 
   var ledPin = pin(1, Mode.output);
   for (int count = 0; count < 5; ++count) {
-    ledPin.value = 1;
+    ledPin.value = true;
     await _delay(1000);
-    ledPin.value = 0;
+    ledPin.value = false;
     await _delay(1000);
   }
 }

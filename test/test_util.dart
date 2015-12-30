@@ -18,7 +18,7 @@ RecordingHardware recording;
 DateTime get now => new DateTime.now();
 
 /// Assert a value for the given pin
-assertValue(Pin pin, int expectedValue) {
+assertValue(Pin pin, bool expectedValue) {
   DateTime end = now.add(new Duration(milliseconds: 250));
   while (now.isBefore(end)) {
     if (pin.value == expectedValue) return;

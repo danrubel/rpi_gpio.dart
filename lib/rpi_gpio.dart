@@ -140,7 +140,7 @@ class Gpio {
     if (message is int) {
       int pinNum = message & RpiGPIO.pinNumMask;
       if (0 <= pinNum && pinNum < _pins.length) {
-        int value = (message & RpiGPIO.pinValueMask) != 0 ? 1 : 0;
+        bool value = (message & RpiGPIO.pinValueMask) != 0;
         _pins[pinNum]._handleInterrupt(value);
       }
     }
@@ -171,10 +171,10 @@ abstract class RpiGPIO implements GPIO {
   /// Each message is an int indicating the pin on which the interrupt occurred
   /// and the value of that pin at the time of the interrupt:
   ///
-  ///     int message = pinNum | (pinValue != 0 ? GpioHardware.pinValueMask : 0);
+  ///     int message = pinNum | (pinValue ? GpioHardware.pinValueMask : 0);
   ///
   ///     int pinNum = message & GpioHardware.pinNumMask;
-  ///     int pinValue = (message & GpioHardware.pinValueMask) != 0 ? 1 : 0;
+  ///     bool pinValue = (message & GpioHardware.pinValueMask) != 0;
   ///
   /// Throws an exception if interrupts have already been initialized.
   void initInterrupts(SendPort port);
@@ -217,7 +217,7 @@ class Pin {
 
   /// The pin's value at the time of the last interrupt.
   /// This is used to filter duplicate interrupts.
-  int _lastInterruptValue;
+  bool _lastInterruptValue;
 
   Pin._(this.pinNum, Mode mode) {
     this.mode = mode;
@@ -285,19 +285,18 @@ class Pin {
     Gpio._hardware.setPulseWidth(pinNum, pulseWidth);
   }
 
-  /// Return the digital value (0 = low, 1 = high) for this pin.
-  int get value {
+  /// Return the digital value (false = 0 = low, true = 1 = high) for this pin.
+  bool get value {
     if (mode != Mode.input)
       throw new GPIOException.invalidCall(pinNum, 'value');
-    return Gpio._hardware.getPin(pinNum) ? 1 : 0;
+    return Gpio._hardware.getPin(pinNum);
   }
 
-  /// Set the digital value (0 = low, 1 = high) for this pin.
-  /// Any value other than zero is considered high.
-  void set value(int value) {
+  /// Set the digital value (false = 0 = low, true = 1 = high) for this pin.
+  void set value(bool value) {
     if (mode != Mode.output)
       throw new GPIOException.invalidCall(pinNum, 'value=');
-    Gpio._hardware.setPin(pinNum, value != 0);
+    Gpio._hardware.setPin(pinNum, value);
   }
 
   /// Return a stream of pin events indicating state changes
@@ -336,7 +335,7 @@ class Pin {
 
   /// Called when this pin's state has changed.
   /// Forward the event to listeners after filtering duplicate interrupts.
-  void _handleInterrupt(int newValue) {
+  void _handleInterrupt(bool newValue) {
     if (_events != null && _lastInterruptValue != newValue) {
       _lastInterruptValue = newValue;
       _events.add(new PinEvent(this, newValue));
@@ -350,7 +349,7 @@ class PinEvent {
   final Pin pin;
 
   /// The new value for the pin.
-  final int value;
+  final bool value;
 
   PinEvent(this.pin, this.value);
 

@@ -27,17 +27,17 @@ runTests() {
     // Setup
     Pin sensorPin = pin(0, Mode.input)..pull = Pull.down;
     Pin ledPin = pin(1, Mode.output)
-      ..value = 0
+      ..value = false
       ..pulseWidth = 0;
-    assertValue(sensorPin, 0);
+    assertValue(sensorPin, false);
 
     // Increase pulse width until the sensor registers the light
     int thresholdUp;
     for (int pulseWidth = 0; pulseWidth <= 1024; pulseWidth += 10) {
       ledPin.pulseWidth = pulseWidth;
       if (thresholdUp == null) await _delay(25);
-      int value = sensorPin.value;
-      if (thresholdUp == null && value == 1) thresholdUp = pulseWidth;
+      bool value = sensorPin.value;
+      if (thresholdUp == null && value == true) thresholdUp = pulseWidth;
     }
     print('pin 1 pwm thresholdUp = $thresholdUp');
 
@@ -46,8 +46,8 @@ runTests() {
     for (int pulseWidth = 1024; pulseWidth >= 0; pulseWidth -= 10) {
       ledPin.pulseWidth = pulseWidth;
       if (thresholdDown == null) await _delay(25);
-      int value = sensorPin.value;
-      if (thresholdDown == null && value == 0) thresholdDown = pulseWidth;
+      bool value = sensorPin.value;
+      if (thresholdDown == null && value == false) thresholdDown = pulseWidth;
     }
     print('pin 1 pwm thresholdDown = $thresholdDown');
   });

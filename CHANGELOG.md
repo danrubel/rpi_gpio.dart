@@ -20,6 +20,7 @@
  * Renamed RpiGPIO.pullUpDnControl to setPull
  * Renamed RpiGPIO.pwmWrite        to setPulseWidth
  * Changed Pin.events from getter to a method that takes an optional parameter
+ * Changed Pin.value and PinEvent.value from int to bool
  * Add Pin.physNum
  * Add Mode.other to match fletch gpio package
  * Add abstract GPIO class to match fletch gpio package

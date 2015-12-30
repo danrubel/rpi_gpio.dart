@@ -41,52 +41,52 @@ runTests() {
     /// Test both rising and falling events
     test('Trigger.both - pin 0', () async {
       _sensorPin = pin(0, Mode.input)..pull = Pull.down;
-      _ledPin = pin(1, Mode.output)..value = 0;
-      assertValue(_sensorPin, 0);
-      expect(await _nextEvent(1, Trigger.both), 1);
-      assertValue(_sensorPin, 1);
-      expect(await _nextEvent(0, Trigger.both), 0);
-      assertValue(_sensorPin, 0);
+      _ledPin = pin(1, Mode.output)..value = false;
+      assertValue(_sensorPin, false);
+      expect(await _nextEvent(true, Trigger.both), true);
+      assertValue(_sensorPin, true);
+      expect(await _nextEvent(false, Trigger.both), false);
+      assertValue(_sensorPin, false);
     });
 
     /// Test both rising and falling events on a different set of pins
     test('Trigger.both - pin 2', () async {
       _sensorPin = pin(2, Mode.input)..pull = Pull.down;
-      _ledPin = pin(3, Mode.output)..value = 0;
-      assertValue(_sensorPin, 0);
-      expect(await _nextEvent(1, Trigger.both), 1);
-      assertValue(_sensorPin, 1);
-      expect(await _nextEvent(0, Trigger.both), 0);
-      assertValue(_sensorPin, 0);
+      _ledPin = pin(3, Mode.output)..value = false;
+      assertValue(_sensorPin, false);
+      expect(await _nextEvent(true, Trigger.both), true);
+      assertValue(_sensorPin, true);
+      expect(await _nextEvent(false, Trigger.both), false);
+      assertValue(_sensorPin, false);
     });
 
     /// Test rising events only
     test('Trigger.rising', () async {
       _sensorPin = pin(0, Mode.input)..pull = Pull.down;
-      _ledPin = pin(1, Mode.output)..value = 0;
-      assertValue(_sensorPin, 0);
-      expect(await _nextEvent(1, Trigger.rising), 1);
-      assertValue(_sensorPin, 1);
+      _ledPin = pin(1, Mode.output)..value = false;
+      assertValue(_sensorPin, false);
+      expect(await _nextEvent(true, Trigger.rising), true);
+      assertValue(_sensorPin, true);
 
       // There should not be a falling event... but there is... why?
-      //expect(await _nextEvent(0, Trigger.rising), null);
+      //expect(await _nextEvent(false, Trigger.rising), null);
       if (hardware is MockHardware)
-        expect(await _nextEvent(0, Trigger.rising), null);
+        expect(await _nextEvent(false, Trigger.rising), null);
       else
-        expect(await _nextEvent(0, Trigger.rising), 0);
+        expect(await _nextEvent(false, Trigger.rising), false);
 
-      assertValue(_sensorPin, 0);
+      assertValue(_sensorPin, false);
     });
 
     /// Test falling events only
     test('Trigger.falling', () async {
       _sensorPin = pin(0, Mode.input)..pull = Pull.down;
-      _ledPin = pin(1, Mode.output)..value = 0;
-      assertValue(_sensorPin, 0);
-      expect(await _nextEvent(1, Trigger.falling), null);
-      assertValue(_sensorPin, 1);
-      expect(await _nextEvent(0, Trigger.falling), 0);
-      assertValue(_sensorPin, 0);
+      _ledPin = pin(1, Mode.output)..value = false;
+      assertValue(_sensorPin, false);
+      expect(await _nextEvent(true, Trigger.falling), null);
+      assertValue(_sensorPin, true);
+      expect(await _nextEvent(false, Trigger.falling), false);
+      assertValue(_sensorPin, false);
     });
 
     /// Test multiple sensor pins
@@ -97,12 +97,12 @@ runTests() {
       });
       try {
         _sensorPin = pin(0, Mode.input)..pull = Pull.down;
-        _ledPin = pin(1, Mode.output)..value = 0;
-        assertValue(_sensorPin, 0);
-        expect(await _nextEvent(1, Trigger.falling), null);
-        assertValue(_sensorPin, 1);
-        expect(await _nextEvent(0, Trigger.falling), 0);
-        assertValue(_sensorPin, 0);
+        _ledPin = pin(1, Mode.output)..value = false;
+        assertValue(_sensorPin, false);
+        expect(await _nextEvent(true, Trigger.falling), null);
+        assertValue(_sensorPin, true);
+        expect(await _nextEvent(false, Trigger.falling), false);
+        assertValue(_sensorPin, false);
       } finally {
         subscription2.cancel();
       }
@@ -111,16 +111,16 @@ runTests() {
     /// Test no events
     test('Trigger.none', () {
       _sensorPin = pin(0, Mode.input)..pull = Pull.down;
-      _ledPin = pin(1, Mode.output)..value = 0;
-      assertValue(_sensorPin, 0);
+      _ledPin = pin(1, Mode.output)..value = false;
+      assertValue(_sensorPin, false);
       expect(_sensorPin.events(Trigger.none), null);
     });
 
     /// Test null trigger
     test('null Trigger', () {
       _sensorPin = pin(0, Mode.input)..pull = Pull.down;
-      _ledPin = pin(1, Mode.output)..value = 0;
-      assertValue(_sensorPin, 0);
+      _ledPin = pin(1, Mode.output)..value = false;
+      assertValue(_sensorPin, false);
       expect(_sensorPin.events(null), null);
     });
   });
@@ -128,11 +128,11 @@ runTests() {
 
 /// Return the sensor value reported by the next event
 /// or `null` if no event received
-Future<int> _nextEvent(int ledValue, Trigger trigger) async {
+Future<bool> _nextEvent(bool ledValue, Trigger trigger) async {
   if (hardware is MockHardware)
     expect((hardware as MockHardware).interruptMap[_sensorPin.pinNum],
         anyOf(isNull, Trigger.none));
-  var completer = new Completer<int>();
+  var completer = new Completer<bool>();
   var subscription = _sensorPin.events(trigger).listen((PinEvent event) {
     if (!identical(event.pin, _sensorPin)) fail('expected sensor pin');
     completer.complete(event.value);
@@ -141,7 +141,7 @@ Future<int> _nextEvent(int ledValue, Trigger trigger) async {
     expect((hardware as MockHardware).interruptMap[_sensorPin.pinNum],
         anyOf(isNull, trigger));
   _ledPin.value = ledValue;
-  int value = await completer.future
+  bool value = await completer.future
       .timeout(new Duration(milliseconds: 100))
       .catchError((e) => null, test: (e) => e is TimeoutException);
   await subscription.cancel();

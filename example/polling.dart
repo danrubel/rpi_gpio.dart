@@ -32,14 +32,14 @@ main() async {
     }
 
     // Toggle the LED
-    ledPin.value = currentValue == 1 ? 0 : 1;
+    ledPin.value = !currentValue;
   });
 
   // Turn on the LED
-  ledPin.value = 1;
+  ledPin.value = true;
 
-  // Cancel polling after 1 seconds
-  new Timer(new Duration(seconds: 1), () {
+  // Cancel polling after 1/4 second
+  new Timer(new Duration(milliseconds: 250), () {
     timer.cancel();
   });
 }
