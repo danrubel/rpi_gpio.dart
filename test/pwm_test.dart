@@ -13,7 +13,7 @@ main() async {
 }
 
 /// Test PWM (Pulse Width Modulation) on pin 1
-/// 
+///
 /// Current test hardware configuration:
 /// pin 1 = an LED (1 = on, 0 = off)
 /// pin 0 = a photo resistor detecting the state of the LED on pin 1
@@ -25,7 +25,7 @@ main() async {
 runTests() {
   test('pwm', () async {
     // Setup
-    Pin sensorPin = pin(0, Mode.input)..pull = pullDown;
+    Pin sensorPin = pin(0, Mode.input)..pull = Pull.down;
     Pin ledPin = pin(1, Mode.output)
       ..value = 0
       ..pulseWidth = 0;

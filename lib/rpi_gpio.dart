@@ -8,10 +8,6 @@ import 'package:rpi_gpio/gpio.dart';
 
 export 'package:rpi_gpio/gpio.dart';
 
-const PinPull pullDown = PinPull.down;
-const PinPull pullOff = PinPull.off;
-const PinPull pullUp = PinPull.up;
-
 /// Indexed by pin number, these strings represent the additional capability
 /// of a given GPIO pin and are used to build human readable description
 /// of known Raspberry Pi rev 2 GPIO pins.
@@ -187,7 +183,7 @@ abstract class RpiGPIO implements GPIO {
   int physPinToGpio(int pinNum);
 
   /// Set the internal pull up/down resistor attached to the given pin,
-  /// which can be any of [PinPull] (e.g. [PinPull.up.index]).
+  /// which can be any of [Pull] (e.g. [Pull.up.index]).
   /// The pin should be set to [Mode.input] before calling this method.
   void pullUpDnControl(int pinNum, int pud);
 
@@ -214,7 +210,7 @@ class Pin {
   Mode _mode;
 
   /// The state of the pin's pull up/down resistor
-  PinPull _pull = pullOff;
+  Pull _pull = Pull.off;
 
   /// The event stream controller or null if none.
   StreamController<PinEvent> _events;
@@ -267,14 +263,14 @@ class Pin {
   }
 
   /// Return the state of the pin's pull up/down resistor
-  PinPull get pull => _pull;
+  Pull get pull => _pull;
 
   /// Set the state of the pin's pull up/down resistor.
   /// The internal pull up/down resistors have a value
   /// of approximately 50KΩ on the Raspberry Pi
-  void set pull(PinPull pull) {
+  void set pull(Pull pull) {
     if (mode != Mode.input) throw new GPIOException.invalidCall(pinNum, 'pull');
-    _pull = pull != null ? pull : pullOff;
+    _pull = pull != null ? pull : Pull.off;
     Gpio._hardware.pullUpDnControl(pinNum, _pull.index);
   }
 
@@ -364,4 +360,4 @@ class PinEvent {
 
 /// When a pin is in [Mode.input] mode, it can have an internal pull up or pull
 /// down resistor connected.
-enum PinPull { off, down, up }
+enum Pull { off, down, up }

@@ -9,9 +9,11 @@
  * Removed GpioHardware.enableInterrupt in favor of RpiGPIO.setTrigger
  * Removed PWM (Pulse Width Modulation) support for pins other than pin 1
  * Removed top level input, output, pulsed const
+ * Removed top level pullup, pulldown, pullOff const
  * Removed Gpio.pin method in favor of top level pin function
  * Move classes similar to fletch gpio package into gpio.dart library
  * Renamed PinMode to Mode
+ * Renamed PinPull to Pull
  * Renamed GpioException GPIOException
  * Renamed GpioHardware to RpiGPIO
  * Renamed RpiHardware  to WiringPiGPIO

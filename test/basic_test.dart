@@ -23,9 +23,9 @@ runTests() {
     expect(Mode.input.index, 0);
     expect(Mode.output.index, 1);
     expect(Mode.other.index, 2);
-    expect(pullOff.index, 0);
-    expect(pullDown.index, 1);
-    expect(pullUp.index, 2);
+    expect(Pull.off.index, 0);
+    expect(Pull.down.index, 1);
+    expect(Pull.up.index, 2);
   });
 
   // Assert physical pin mapping
@@ -73,9 +73,9 @@ runTests() {
     expectThrows(() => pin(1, Mode.output).value);
 
     // Cannot set pull up for output pin
-    expectThrows(() => pin(4, Mode.output).pull = pullUp);
-    expectThrows(() => pin(4, Mode.output).pull = pullDown);
-    expectThrows(() => pin(4, Mode.output).pull = pullOff);
+    expectThrows(() => pin(4, Mode.output).pull = Pull.up);
+    expectThrows(() => pin(4, Mode.output).pull = Pull.down);
+    expectThrows(() => pin(4, Mode.output).pull = Pull.off);
 
     // Cannot set other mode
     expectThrows(() => pin(4, Mode.other));
@@ -104,16 +104,16 @@ runTests() {
   // on a disconnected pin
   test('basic pull up/down', () {
     var pin4 = pin(4, Mode.input);
-    expect(pin4.pull, pullOff);
-    pin4.pull = pullUp;
+    expect(pin4.pull, Pull.off);
+    pin4.pull = Pull.up;
     assertValue(pin4, 1);
-    expect(pin4.pull, pullUp);
+    expect(pin4.pull, Pull.up);
     pin4.pull = null;
-    expect(pin4.pull, pullOff);
-    pin4.pull = pullDown;
+    expect(pin4.pull, Pull.off);
+    pin4.pull = Pull.down;
     assertValue(pin4, 0);
-    expect(pin4.pull, pullDown);
-    pin4.pull = pullOff;
-    expect(pin4.pull, pullOff);
+    expect(pin4.pull, Pull.down);
+    pin4.pull = Pull.off;
+    expect(pin4.pull, Pull.off);
   });
 }

@@ -110,9 +110,9 @@ class MockHardware implements RpiGPIO {
   @override
   void pullUpDnControl(int pinNum, int pud) {
     if (pinNum == 4) {
-      if (pud == pullUp.index) {
+      if (pud == Pull.up.index) {
         setPin(4, true);
-      } else if (pud == pullDown.index) {
+      } else if (pud == Pull.down.index) {
         setPin(4, false);
       } else {
         values[4] = null;

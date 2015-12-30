@@ -34,11 +34,11 @@ runTests() {
       }
     }
 
-    sensorPin = pin(0, Mode.input)..pull = pullDown;
+    sensorPin = pin(0, Mode.input)..pull = Pull.down;
     ledPin = pin(1, Mode.output)..value = 0;
     testWriteRead();
 
-    sensorPin = pin(2, Mode.input)..pull = pullDown;
+    sensorPin = pin(2, Mode.input)..pull = Pull.down;
     ledPin = pin(3, Mode.output)..value = 0;
     testWriteRead();
   });
