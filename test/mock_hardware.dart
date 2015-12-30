@@ -13,31 +13,44 @@ import 'test_util.dart';
 /// pin 2 = a photo resistor detecting the state of the LED on pin 3
 /// pin 1 = an LED (1 = on, 0 = off)
 /// pin 0 = a photo resistor detecting the state of the LED on pin 1
-class MockHardware implements GpioHardware {
+class MockHardware implements RpiGPIO {
   List<int> values;
   List<StateChange> stateChanges;
   SendPort interruptEventPort;
-  List<bool> interruptMap;
+  List<Trigger> interruptMap;
 
   MockHardware() {
     reset();
   }
 
   @override
-  int digitalRead(int pinNum) {
-    if (0 <= pinNum && pinNum <= 4) return values[pinNum];
+  int get pins => 20;
+
+  @override
+  bool getPin(int pinNum) {
+    if (0 <= pinNum && pinNum <= 4) return values[pinNum] != 0;
     throw 'digitalRead not mocked for pin $pinNum';
   }
 
   @override
-  void digitalWrite(int pinNum, int value) {
-    var digitalValue = value != 0 ? 1 : 0;
+  void setPin(int pinNum, bool boolValue) {
+    var digitalValue = boolValue ? 1 : 0;
     _write(int pinNum) {
       if (values[pinNum] != digitalValue) {
         values[pinNum] = digitalValue;
-        if (interruptMap[pinNum]) {
-          interruptEventPort.send(
-              pinNum | (digitalValue != 0 ? GpioHardware.pinValueMask : 0));
+        Trigger trigger = interruptMap[pinNum];
+        if (digitalValue == 1) {
+          // rising
+          if (trigger == Trigger.rising || trigger == Trigger.both) {
+            interruptEventPort
+                .send(pinNum | (digitalValue != 0 ? RpiGPIO.pinValueMask : 0));
+          }
+        } else {
+          // falling
+          if (trigger == Trigger.falling || trigger == Trigger.both) {
+            interruptEventPort
+                .send(pinNum | (digitalValue != 0 ? RpiGPIO.pinValueMask : 0));
+          }
         }
       }
     }
@@ -60,16 +73,16 @@ class MockHardware implements GpioHardware {
   }
 
   @override
-  void disableAllInterrupts() {
-    interruptEventPort = null;
-    interruptMap = <bool>[false, false, false, false, false];
+  void setMode(int pin, Mode mode) {
+    // validated by RecordingHardware
   }
 
+  // ========== WiringPi Specific API ======================
+
   @override
-  int enableInterrupt(int pinNum) {
-    if (interruptEventPort == null) throw 'must call initInterrupts';
-    interruptMap[pinNum] = true;
-    return -1;
+  void disableAllInterrupts() {
+    interruptEventPort = null;
+    interruptMap = <Trigger>[null, null, null, null, null];
   }
 
   @override
@@ -83,17 +96,24 @@ class MockHardware implements GpioHardware {
   }
 
   @override
-  void pinMode(int pinNum, int modeIndex) {
-    // validated by RecordingHardware
-  }
+  int physPinToGpio(int pinNum) => [
+        -1, //                                      0
+        -1, -1, 2, -1, 3, -1, 4, 14, -1, 15, //     1 - 10
+        17, 18, 27, -1, 22, 23, -1, 24, 10, -1, // 11 - 20
+        9, 25, 11, 8, -1, 7, 0, 1, 5, -1, //       21 - 30
+        6, 12, 13, -1, 19, 16, 26, 20, -1, 21, //  31 - 40
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 41 - 50
+        28, 29, 30, 31, -1, -1, -1, -1, -1, -1, // 51 - 60
+        -1, -1, -1, -1, -1, -1, -1, -1, //         60+
+      ][pinNum];
 
   @override
   void pullUpDnControl(int pinNum, int pud) {
     if (pinNum == 4) {
       if (pud == pullUp.index) {
-        digitalWrite(4, 1);
+        setPin(4, true);
       } else if (pud == pullDown.index) {
-        digitalWrite(4, 0);
+        setPin(4, false);
       } else {
         values[4] = null;
       }
@@ -106,7 +126,7 @@ class MockHardware implements GpioHardware {
   void pwmWrite(int pinNum, int pulseWidth) {
     // Simulate hardware pwm on pin 1.
     if (pinNum == 1)
-      digitalWrite(1, pulseWidth > 500 ? 1 : 0);
+      setPin(1, pulseWidth > 500);
     else
       throw 'pwm not mocked for pin $pinNum';
   }
@@ -118,16 +138,10 @@ class MockHardware implements GpioHardware {
   }
 
   @override
-  int physPinToGpio(int pinNum) => [
-        -1, //                                      0
-        -1, -1, 2, -1, 3, -1, 4, 14, -1, 15, //     1 - 10
-        17, 18, 27, -1, 22, 23, -1, 24, 10, -1, // 11 - 20
-        9, 25, 11, 8, -1, 7, 0, 1, 5, -1, //       21 - 30
-        6, 12, 13, -1, 19, 16, 26, 20, -1, 21, //  31 - 40
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 41 - 50
-        28, 29, 30, 31, -1, -1, -1, -1, -1, -1, // 51 - 60
-        -1, -1, -1, -1, -1, -1, -1, -1, //         60+
-      ][pinNum];
+  void setTrigger(int pinNum, Trigger trigger) {
+    if (interruptEventPort == null) throw 'must call initInterrupts';
+    interruptMap[pinNum] = trigger;
+  }
 }
 
 class StateChange {

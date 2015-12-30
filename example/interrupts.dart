@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:rpi_gpio/rpi_gpio.dart';
-import 'package:rpi_gpio/rpi_hardware.dart';
+import 'package:rpi_gpio/wiringpi_gpio.dart';
 
 /// Use interrupts to monitor the state change on a given pin
 /// This assumes a hardware setup where
@@ -11,7 +11,7 @@ main() async {
 
   // Initialize the hardware
   // See read_with_mocks.dart for testing on non-RaspberryPi platforms
-  Gpio.hardware = new RpiHardware();
+  Gpio.hardware = new WiringPiGPIO();
 
   var stopwatch = new Stopwatch()..start();
 
@@ -23,7 +23,7 @@ main() async {
 
   // Subscribe to pin change events
   print('initial value: ${sensorPin.value}');
-  var subscription = sensorPin.events.listen((PinEvent event) {
+  var subscription = sensorPin.events().listen((PinEvent event) {
     print('${stopwatch.elapsedMilliseconds} value: ${event.value}');
 
     // Toggle the LED
@@ -33,9 +33,12 @@ main() async {
   // Turn on the LED
   ledPin.value = 1;
 
-  // Cancel listening for interrupts after 1 seconds
-  new Timer(new Duration(seconds: 1), () {
+  // Cancel listening for interrupts after 1/4 second
+  new Timer(new Duration(milliseconds: 250), () {
     subscription.cancel();
+
+    // Ensure LED is off
+    ledPin.value = 0;
   });
 }
 

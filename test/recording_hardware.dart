@@ -4,15 +4,17 @@ import 'dart:isolate';
 
 import 'package:rpi_gpio/rpi_gpio.dart';
 
-class NoOpHardware extends GpioHardware {
-  @override int digitalRead(int pinNum) => 0;
-  @override void digitalWrite(int pinNum, int value) {}
+class NoOpHardware extends RpiGPIO {
+  @override int get pins => 0;
+  @override bool getPin(int pin) => false;
+  @override void setMode(int pin, Mode mode) {}
+  @override void setPin(int pin, bool value) {}
+  @override void setTrigger(int pin, Trigger trigger) {}
+  // ========== WiringPi Specific API ======================
   @override void disableAllInterrupts() {}
-  @override int enableInterrupt(int pinNum) => -1;
   @override int gpioNum(int pinNum) => -1;
   @override void initInterrupts(SendPort port) {}
-  @override  int physPinToGpio(int pinNum) => -1;
-  @override void pinMode(int pinNum, int mode) {}
+  @override int physPinToGpio(int pinNum) => -1;
   @override void pullUpDnControl(int pinNum, int pud) {}
   @override void pwmWrite(int pinNum, int pulseWidth) {}
 }
@@ -21,8 +23,8 @@ class NoOpHardware extends GpioHardware {
 /// validates that the operation is appropriate for the current mode,
 /// and optionally forwards the requests to the underlying hardware.
 /// Usage can be displayed via [printUsage].
-class RecordingHardware implements GpioHardware {
-  final GpioHardware _hardware;
+class RecordingHardware implements RpiGPIO {
+  final RpiGPIO _hardware;
   ReceivePort _hardwarePort;
   SendPort _clientPort;
 
@@ -32,40 +34,59 @@ class RecordingHardware implements GpioHardware {
   /// A sequence of hardware events
   List _events = [];
 
-  RecordingHardware([GpioHardware hardware])
+  RecordingHardware([RpiGPIO hardware])
       : _hardware = hardware != null ? hardware : new NoOpHardware();
 
   @override
-  int digitalRead(int pinNum) {
+  int get pins => _hardware.pins;
+
+  @override
+  bool getPin(int pinNum) {
     _assertMode(pinNum, Mode.input);
-    return _hardware != null ? _hardware.digitalRead(pinNum) : 0;
+    return _hardware.getPin(pinNum);
   }
 
   @override
-  void digitalWrite(int pinNum, int value) {
+  void setPin(int pinNum, bool value) {
     _assertMode(pinNum, Mode.output);
-    _hardware.digitalWrite(pinNum, value);
+    _hardware.setPin(pinNum, value);
   }
+
+  @override
+  void setMode(int pinNum, Mode mode) {
+    if (mode == Mode.other) throw 'Cannot set any pin to Mode.other';
+    if (_mode(pinNum) != mode) _states.add(new _PinState(pinNum, mode));
+    _hardware.setMode(pinNum, mode);
+  }
+
+  @override
+  void setTrigger(int pinNum, Trigger trigger) {
+    if (_mode(pinNum) != Mode.input) throw 'Must set Mode.input for interrupts';
+    _hardware.setTrigger(pinNum, trigger);
+  }
+
+  // ========== WiringPi Specific API ======================
 
   @override
   void disableAllInterrupts() {
+    if (_clientPort == null) throw 'disableAllInterrupts already called';
     _hardware.disableAllInterrupts();
     _hardwarePort.close();
+    _hardwarePort = null;
+    _clientPort = null;
   }
-
-  @override
-  int enableInterrupt(int pinNum) => _hardware.enableInterrupt(pinNum);
 
   @override
   int gpioNum(int pinNum) => _hardware.gpioNum(pinNum);
 
   @override
   void initInterrupts(SendPort port) {
+    if (_clientPort != null) throw 'initInterrupts already called';
     _clientPort = port;
     _hardwarePort = new ReceivePort()
       ..listen((message) {
-        int pinNum = message & GpioHardware.pinNumMask;
-        int pinValue = (message & GpioHardware.pinValueMask) != 0 ? 1 : 0;
+        int pinNum = message & RpiGPIO.pinNumMask;
+        int pinValue = (message & RpiGPIO.pinValueMask) != 0 ? 1 : 0;
         _events.add('pin $pinNum value $pinValue');
         _clientPort.send(message);
       });
@@ -74,13 +95,6 @@ class RecordingHardware implements GpioHardware {
 
   @override
   int physPinToGpio(int pinNum) => _hardware.physPinToGpio(pinNum);
-
-  @override
-  void pinMode(int pinNum, int modeIndex) {
-    var mode = Mode.values[modeIndex];
-    if (_mode(pinNum) != mode) _states.add(new _PinState(pinNum, mode));
-    _hardware.pinMode(pinNum, modeIndex);
-  }
 
   void printUsage() {
     var map = <int, Set<Mode>>{};

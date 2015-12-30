@@ -2,8 +2,8 @@ library test.hardware.blink;
 
 import 'dart:async';
 
-import 'package:rpi_gpio/rpi_hardware.dart';
 import 'package:rpi_gpio/rpi_gpio.dart';
+import 'package:rpi_gpio/wiringpi_gpio.dart';
 
 /// Obsolete Example :: PWM only supported on Pin #1
 
@@ -14,7 +14,7 @@ import 'package:rpi_gpio/rpi_gpio.dart';
 /// GPIO 1 (BMC_GPIO 18, Physical Pin 12) uses hardware pwm.
 /// GPIO 2 (BMC_GPIO 27, Physical Pin 13) uses software pwm.
 main() async {
-  Gpio.hardware = new RpiHardware();
+  Gpio.hardware = new WiringPiGPIO();
 
   // TODO Remove the need to call this method for initialization
   Gpio.instance;

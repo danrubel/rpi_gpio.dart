@@ -1,12 +1,12 @@
 import 'package:rpi_gpio/rpi_gpio.dart';
-import 'package:rpi_gpio/rpi_hardware.dart';
+import 'package:rpi_gpio/wiringpi_gpio.dart';
 
 /// Read current values for pins 0 - 7
 main() async {
 
   // Initialize the hardware
   // See read_with_mocks.dart for testing on non-RaspberryPi platforms
-  Gpio.hardware = new RpiHardware();
+  Gpio.hardware = new WiringPiGPIO();
 
   // TODO remove the need to call this method
   Gpio.instance;

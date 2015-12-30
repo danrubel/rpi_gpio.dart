@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:rpi_gpio/rpi_gpio.dart';
-import 'package:rpi_gpio/rpi_hardware.dart';
+import 'package:rpi_gpio/wiringpi_gpio.dart';
 
 /// Use polling to monitor the state change on a given pin
 /// This assumes a hardware setup where
@@ -11,7 +11,7 @@ main() async {
 
   // Initialize the hardware
   // See read_with_mocks.dart for testing on non-RaspberryPi platforms
-  Gpio.hardware = new RpiHardware();
+  Gpio.hardware = new WiringPiGPIO();
 
   var stopwatch = new Stopwatch()..start();
 

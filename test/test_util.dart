@@ -3,14 +3,14 @@ library test.rpi_gpio.util;
 import 'dart:async';
 
 import 'package:rpi_gpio/rpi_gpio.dart';
-import 'package:rpi_gpio/rpi_hardware.dart' deferred as rpi;
+import 'package:rpi_gpio/wiringpi_gpio.dart' deferred as rpi;
 import 'package:test/test.dart';
 
 import 'mock_hardware.dart';
 import 'recording_hardware.dart';
 
 /// Hardware for testing
-GpioHardware hardware;
+RpiGPIO hardware;
 
 /// Recording hardware for testing
 RecordingHardware recording;
@@ -27,14 +27,14 @@ assertValue(Pin pin, int expectedValue) {
 }
 
 /// Setup hardware for testing
-Future<GpioHardware> setupHardware() async {
+Future<RpiGPIO> setupHardware() async {
   if (recording != null) return recording;
 
   // Load the Raspberry Pi native method library if running on the RPi
   // otherwise create mock hardware for testing code on other platforms.
   if (isRaspberryPi) {
     await rpi.loadLibrary();
-    hardware = new rpi.RpiHardware();
+    hardware = new rpi.WiringPiGPIO();
   } else {
     print('>>> initializing mock hardware');
     hardware = new MockHardware();

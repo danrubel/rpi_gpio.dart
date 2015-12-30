@@ -306,24 +306,41 @@ void initInterrupts(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
-// Enable interrupts for the given pin.
-// \param the number of the pin for which interrupts should be enabled.
-// TODO provide the ability to disable interrupts for a given pin.
-void enableInterrupt(Dart_NativeArguments arguments) {
+// Sets the interrupt trigger for [pinNum] to [trigger] where
+// trigger 0 = none
+// trigger 1 = rising
+// trigger 2 = falling
+// trigger 3 = both
+// int _setTrigger(int pinNum, int trigger) native "setTrigger";
+void setTrigger(Dart_NativeArguments arguments) {
   Dart_EnterScope();
   Dart_Handle pin_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
-  int64_t pin_num;
+  Dart_Handle trigger_obj = HandleError(Dart_GetNativeArgument(arguments, 2));
+  int64_t pin_num, trigger_num;
   HandleError(Dart_IntegerToInt64(pin_obj, &pin_num));
+  HandleError(Dart_IntegerToInt64(trigger_obj, &trigger_num));
+  // Map trigger_num to edge
+  int edge = INT_EDGE_NONE;
+  /**/ if (trigger_num == 1) edge = INT_EDGE_RISING;
+  else if (trigger_num == 2) edge = INT_EDGE_FALLING;
+  else if (trigger_num == 3) edge = INT_EDGE_BOTH;
   // Determine if this interrupt is already enabled
   int interruptNum = -1;
   for (int i = 0; i < interruptToPinMax; ++i) {
     if (interruptToPin[i] == pin_num) {
       interruptNum = i;
+      if (edge == INT_EDGE_NONE) {
+        // Disable an existing interrupt trigger
+        interruptToPin[i] = -1;
+        int gpio_pin_num = wpiPinToGpio(pin_num);
+        doEdge(gpio_pin_num, INT_EDGE_NONE);
+        interruptNum = -1;
+      }
       break;
     }
   }
   // If not already enabled then find an unused interrupt
-  if (interruptNum == -1) {
+  if (interruptNum == -1 && edge != INT_EDGE_NONE) {
     for (int i = 0; i < interruptToPinMax; ++i) {
       if (interruptToPin[i] == -1) {
         interruptToPin[i] = pin_num;
@@ -338,13 +355,13 @@ void enableInterrupt(Dart_NativeArguments arguments) {
       // This is the method we would call,
       // but calling wiringPiISR with any value other than INT_EDGE_SETUP
       // requires the global gpio utility to be installed.
-      //wiringPiISR(pin_num, INT_EDGE_BOTH, gpioInterruptMap[interruptNum]);
+      //wiringPiISR(pin_num, edge, gpioInterruptMap[interruptNum]);
 
       // Instead, call doEdge which is inlined from the gpio.c
       // global utility which is part of the wiringPi library,
       // and then call wiringPiISR with INT_EDGE_SETUP
       int gpio_pin_num = wpiPinToGpio(pin_num);
-      doEdge(gpio_pin_num, INT_EDGE_BOTH);
+      doEdge(gpio_pin_num, edge);
       wiringPiISR(pin_num, INT_EDGE_SETUP, gpioInterruptMap[interruptNum]);
 
     } else {
@@ -376,12 +393,12 @@ FunctionLookup function_list[] = {
   {"digitalRead", digitalRead},
   {"digitalWrite", digitalWrite},
   {"disableAllInterrupts", disableAllInterrupts},
-  {"enableInterrupt", enableInterrupt},
   {"initInterrupts", initInterrupts},
   {"pinMode", pinMode},
   {"physPinToGpio", physPinToGpio},
   {"pullUpDnControl", pullUpDnControl},
   {"pwmWrite", pwmWrite},
+  {"setTrigger", setTrigger},
   {"wpiPinToGpio", wpiPinToGpio},
   {NULL, NULL}
 };

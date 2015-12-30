@@ -2,15 +2,23 @@
 
 ## 0.3.0
  * BREAKING CHANGES to match the [fletch gpio package](https://github.com/dart-lang/fletch/blob/master/pkg/gpio/lib/gpio.dart)
- * Renamed PinMode to Mode
- * Renamed GpioException GPIOException
- * Add Pin.physNum
- * Add Mode.other to match fletch gpio package
- * Removed Mode.pulsed in favor of Mode.output and pulseWidth
- * Removed pwm support for pins other than pin 1
+ * Removed GpioHardware.pinMode         in favor of GPIO.setMode
+ * Removed GpioHardware.digitalRead     in favor of GPIO.getPin
+ * Removed GpioHardware.digitalWrite    in favor of GPIO.setPin
+ * Removed Mode.pulsed                  in favor of Mode.output and pulseWidth
+ * Removed GpioHardware.enableInterrupt in favor of RpiGPIO.setTrigger
+ * Removed PWM (Pulse Width Modulation) support for pins other than pin 1
  * Removed top level input, output, pulsed const
  * Removed Gpio.pin method in favor of top level pin function
  * Move classes similar to fletch gpio package into gpio.dart library
+ * Renamed PinMode to Mode
+ * Renamed GpioException GPIOException
+ * Renamed GpioHardware to RpiGPIO
+ * Renamed RpiHardware  to WiringPiGPIO
+ * Changed Pin.events from getter to a method that takes an optional parameter
+ * Add Pin.physNum
+ * Add Mode.other to match fletch gpio package
+ * Add abstract GPIO class to match fletch gpio package
 
 ## 0.2.2
 

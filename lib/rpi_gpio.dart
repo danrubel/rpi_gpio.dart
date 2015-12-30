@@ -13,7 +13,7 @@ const PinPull pullOff = PinPull.off;
 const PinPull pullUp = PinPull.up;
 
 /// Indexed by pin number, these strings represent the additional capability
-/// of a given GPIO pin and are used to buildv human readable description
+/// of a given GPIO pin and are used to build human readable description
 /// of known Raspberry Pi rev 2 GPIO pins.
 /// See http://wiringpi.com/pins/special-pin-functions/
 const List<String> _descriptionSuffix = const [
@@ -92,18 +92,18 @@ Map<int, int> get gpioToPhysNum {
 
 /// [Gpio] provides access to the General Purpose I/O (GPIO) pins.
 /// Pulse width modulation can be simulated on pins other than pin 1
-/// by substituting different [GpioHardware] implements via [hardware] method.
+/// by substituting different [RpiGPIO] implements via [hardware] method.
 class Gpio {
   /// The single [Gpio] instance
   /// or `null` if [instance] has not yet been called.
   static Gpio _instance;
 
   /// The API used by this class to access the underlying hardware
-  static GpioHardware _hardware;
+  static RpiGPIO _hardware;
 
   /// Set the underlying hardware API used by the [Gpio] [instance].
   /// This may be only called once.
-  static void set hardware(GpioHardware hardware) {
+  static void set hardware(RpiGPIO hardware) {
     if (_hardware != null)
       throw new GPIOException('Gpio.hardware has already been set');
     _hardware = hardware;
@@ -142,9 +142,9 @@ class Gpio {
   /// Called when a pin's state has changed.
   void _handleInterrupt(message) {
     if (message is int) {
-      int pinNum = message & GpioHardware.pinNumMask;
+      int pinNum = message & RpiGPIO.pinNumMask;
       if (0 <= pinNum && pinNum < _pins.length) {
-        int value = (message & GpioHardware.pinValueMask) != 0 ? 1 : 0;
+        int value = (message & RpiGPIO.pinValueMask) != 0 ? 1 : 0;
         _pins[pinNum]._handleInterrupt(value);
       }
     }
@@ -160,29 +160,12 @@ class Gpio {
 }
 
 /// API used by [Gpio] for accessing the underlying hardware.
-abstract class GpioHardware {
+abstract class RpiGPIO implements GPIO {
   static final pinNumMask = 0x7F;
   static final pinValueMask = 0x80;
 
-  /// Return the value for the given pin.
-  /// 0 = low or ground, 1 = high or positive.
-  /// The pin should be set to [Mode.input] before calling this method.
-  int digitalRead(int pinNum);
-
-  /// Set the current output voltage for the given pin.
-  /// 0 = low or ground, 1 = high or positive.
-  /// The pin should be set to [Mode.output] before calling this method.
-  void digitalWrite(int pinNum, int value);
-
   /// Disable the background interrupt listener.
   void disableAllInterrupts();
-
-  /// Enable interrupts for the given pin.
-  /// Throws an exception if [initInterrupts] has not been called
-  /// or if there cannot be any more active interrupts.
-  /// The pin should be set to [Mode.input] before calling this method.
-  /// TODO provide the ability to disable interrupts for a given pin.
-  int enableInterrupt(int pinNum);
 
   /// Return the GPIO number for the given WiringPi pin number.
   int gpioNum(int pinNum);
@@ -200,10 +183,6 @@ abstract class GpioHardware {
   /// Throws an exception if interrupts have already been initialized.
   void initInterrupts(SendPort port);
 
-  /// Set the given pin to the specified mode,
-  /// which can be any of [Mode] (e.g. [Mode.input.index]).
-  void pinMode(int pinNum, int mode);
-
   /// Return the GPIO pin number for the given physical pin.
   int physPinToGpio(int pinNum);
 
@@ -217,6 +196,12 @@ abstract class GpioHardware {
   /// of time out of 1024 that the pin outputs a high value rather than ground.
   /// The pin should be set to [Mode.output] before calling this method.
   void pwmWrite(int pinNum, int pulseWidth);
+
+  /// Sets the interrupt trigger for [pinNum] to [trigger].
+  /// Throws an exception if [initInterrupts] has not been called
+  /// or if there cannot be any more active interrupts.
+  /// The pin should be set to [Mode.input] before calling this method.
+  void setTrigger(int pinNum, Trigger trigger);
 }
 
 /// [Pin] represents a single GPIO pin for Raspberry Pi
@@ -251,28 +236,12 @@ class Pin {
     } else {
       suffix = '';
     }
-    return 'Pin $pinNum (BMC_GPIO $gpioNum, Phys $physNum$suffix)';
-  }
-
-  /// Return a stream of pin events indicating state changes.
-  Stream<PinEvent> get events {
-    if (_events == null) {
-      _events = new StreamController(onListen: () {
-        if (_mode != Mode.input) {
-          _events
-              .addError(new GPIOException.invalidCall(pinNum, 'events.listen'));
-          return;
-        }
-        Gpio._instance._initInterrupts();
-        Gpio._hardware.enableInterrupt(pinNum);
-        _lastInterruptValue = value;
-      }, onCancel: () {
-        _events.close();
-        _events = null;
-        Gpio._instance._checkDisableAllInterrupts();
-      });
+    try {
+      return 'Pin $pinNum (BMC_GPIO $gpioNum, Phys $physNum$suffix)';
+    } on NoSuchMethodError {
+      // Fall through
     }
-    return _events.stream;
+    return 'Pin $pinNum (BMC_GPIO ??, Phys ??$suffix)';
   }
 
   /// Return the GPIO number for this pin
@@ -289,7 +258,7 @@ class Pin {
     if (mode == Mode.other)
       throw new GPIOException('Cannot set mode other', pinNum);
     _mode = mode;
-    Gpio._hardware.pinMode(pinNum, mode.index);
+    Gpio._hardware.setMode(pinNum, mode);
   }
 
   /// Return the physical pin number for the given GPIO pin
@@ -324,7 +293,7 @@ class Pin {
   int get value {
     if (mode != Mode.input)
       throw new GPIOException.invalidCall(pinNum, 'value');
-    return Gpio._hardware.digitalRead(pinNum);
+    return Gpio._hardware.getPin(pinNum) ? 1 : 0;
   }
 
   /// Set the digital value (0 = low, 1 = high) for this pin.
@@ -332,7 +301,38 @@ class Pin {
   void set value(int value) {
     if (mode != Mode.output)
       throw new GPIOException.invalidCall(pinNum, 'value=');
-    Gpio._hardware.digitalWrite(pinNum, value);
+    Gpio._hardware.setPin(pinNum, value != 0);
+  }
+
+  /// Return a stream of pin events indicating state changes
+  /// where [trigger] indicates which events are desired.
+  /// If [trigger] is not specified, then both [Trigger.rising]
+  /// and [Trigger.falling] events will be streamed.
+  /// If [trigger] is [Trigger.none] or `null` then `null` is returned.
+  /// An exception is thrown if [events] is called a second time
+  /// without the stream subscription from the first call being canceled.
+  Stream<PinEvent> events([Trigger trigger = Trigger.both]) {
+    if (_events != null) {
+      throw new GPIOException(
+          'must cancel first subscription before calling events again', pinNum);
+    }
+    if (trigger == Trigger.none || trigger == null) return null;
+    _events = new StreamController(onListen: () {
+      if (_mode != Mode.input) {
+        var e = new GPIOException.invalidCall(pinNum, 'events.listen');
+        _events.addError(e);
+        return;
+      }
+      Gpio._instance._initInterrupts();
+      Gpio._hardware.setTrigger(pinNum, trigger);
+      _lastInterruptValue = value;
+    }, onCancel: () {
+      _events.close();
+      _events = null;
+      Gpio._hardware.setTrigger(pinNum, Trigger.none);
+      Gpio._instance._checkDisableAllInterrupts();
+    });
+    return _events.stream;
   }
 
   @override

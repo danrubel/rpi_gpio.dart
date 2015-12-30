@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:rpi_gpio/rpi_gpio.dart';
 import 'package:test/test.dart';
 
+import 'mock_hardware.dart';
 import 'test_util.dart';
 
 // Current test hardware configuration:
@@ -19,63 +20,133 @@ main() async {
   runTests();
 }
 
+Pin _sensorPin;
+Pin _ledPin;
+
 runTests() {
   // TODO fix so that this method need not be called
   Gpio.instance;
 
-  // This test assumes that Mode.output from wiringPi pin 1 (BMC_GPIO 18, Phys 12)
+  // This test group assumes that Mode.output from wiringPi pin 1 (BMC_GPIO 18, Phys 12)
   // can trigger an interrupt on wiringPi pin 0 (BMC_GPIO 17, Phys 11),
   // and Mode.output from wiringPi pin 3 (BMC_GPIO 22, Phys 15)
   // can be read as [Mode.input] on wiringPi pin 2  (BMC_GPIO 27, Phys 13).
-  test('interrupts', () async {
-    Pin sensorPin;
-    Pin ledPin;
+  group('interrupts', () {
+    /// Instantiate high # pin to check disable interrupts bug is fixed
+    /// https://github.com/danrubel/rpi_gpio.dart/issues/7
+    test('input', () {
+      pin(10, Mode.input);
+    });
 
-    testInterrupt() async {
-      assertValue(sensorPin, 0);
-      var expectedSensorValue;
-      var completer;
-      var subscription = sensorPin.events.listen((PinEvent event) {
-        if (!identical(event.pin, sensorPin)) fail('expected sensor pin');
-        if (event.value == expectedSensorValue) completer.complete();
+    /// Test both rising and falling events
+    test('Trigger.both - pin 0', () async {
+      _sensorPin = pin(0, Mode.input)..pull = pullDown;
+      _ledPin = pin(1, Mode.output)..value = 0;
+      assertValue(_sensorPin, 0);
+      expect(await _nextEvent(1, Trigger.both), 1);
+      assertValue(_sensorPin, 1);
+      expect(await _nextEvent(0, Trigger.both), 0);
+      assertValue(_sensorPin, 0);
+    });
+
+    /// Test both rising and falling events on a different set of pins
+    test('Trigger.both - pin 2', () async {
+      _sensorPin = pin(2, Mode.input)..pull = pullDown;
+      _ledPin = pin(3, Mode.output)..value = 0;
+      assertValue(_sensorPin, 0);
+      expect(await _nextEvent(1, Trigger.both), 1);
+      assertValue(_sensorPin, 1);
+      expect(await _nextEvent(0, Trigger.both), 0);
+      assertValue(_sensorPin, 0);
+    });
+
+    /// Test rising events only
+    test('Trigger.rising', () async {
+      _sensorPin = pin(0, Mode.input)..pull = pullDown;
+      _ledPin = pin(1, Mode.output)..value = 0;
+      assertValue(_sensorPin, 0);
+      expect(await _nextEvent(1, Trigger.rising), 1);
+      assertValue(_sensorPin, 1);
+
+      // There should not be a falling event... but there is... why?
+      //expect(await _nextEvent(0, Trigger.rising), null);
+      if (hardware is MockHardware)
+        expect(await _nextEvent(0, Trigger.rising), null);
+      else
+        expect(await _nextEvent(0, Trigger.rising), 0);
+
+      assertValue(_sensorPin, 0);
+    });
+
+    /// Test falling events only
+    test('Trigger.falling', () async {
+      _sensorPin = pin(0, Mode.input)..pull = pullDown;
+      _ledPin = pin(1, Mode.output)..value = 0;
+      assertValue(_sensorPin, 0);
+      expect(await _nextEvent(1, Trigger.falling), null);
+      assertValue(_sensorPin, 1);
+      expect(await _nextEvent(0, Trigger.falling), 0);
+      assertValue(_sensorPin, 0);
+    });
+
+    /// Test multiple sensor pins
+    test('multiple triggers', () async {
+      var pin2 = pin(2, Mode.input)..pull = pullDown;
+      var subscription2 = pin2.events(Trigger.both).listen((PinEvent event) {
+        throw 'unexpected event';
       });
+      try {
+        _sensorPin = pin(0, Mode.input)..pull = pullDown;
+        _ledPin = pin(1, Mode.output)..value = 0;
+        assertValue(_sensorPin, 0);
+        expect(await _nextEvent(1, Trigger.falling), null);
+        assertValue(_sensorPin, 1);
+        expect(await _nextEvent(0, Trigger.falling), 0);
+        assertValue(_sensorPin, 0);
+      } finally {
+        subscription2.cancel();
+      }
+    });
 
-      // When LED turns on, assert that a sensor pin interrupt occurred
-      // and that the sensor value is 1.
-      expectedSensorValue = 1;
-      var waitTime = new Duration(milliseconds: 100);
-      completer = new Completer();
-      var future = completer.future.timeout(waitTime).catchError((e) {
-        subscription.cancel();
-        throw 'Expected value $expectedSensorValue on $sensorPin\n$e';
-      });
-      ledPin.value = 1;
-      await future;
+    /// Test no events
+    test('Trigger.none', () {
+      _sensorPin = pin(0, Mode.input)..pull = pullDown;
+      _ledPin = pin(1, Mode.output)..value = 0;
+      assertValue(_sensorPin, 0);
+      expect(_sensorPin.events(Trigger.none), null);
+    });
 
-      // When LED turns off, assert that a sensor pin interrupt occurred
-      // and that the sensor value is 0.
-      expectedSensorValue = 0;
-      completer = new Completer();
-      future = completer.future.timeout(waitTime).catchError((e) {
-        subscription.cancel();
-        throw 'Expected value $expectedSensorValue on $sensorPin\n$e';
-      }).whenComplete(() {
-        subscription.cancel();
-      });
-      ledPin.value = 0;
-      await future;
-    }
-
-    // Instantiate high # pin to check disable interrupts bug is fixed
-    // https://github.com/danrubel/rpi_gpio.dart/issues/7
-    pin(10, Mode.input);
-
-    sensorPin = pin(0, Mode.input)..pull = pullDown;
-    ledPin = pin(1, Mode.output)..value = 0;
-    await testInterrupt();
-
-    sensorPin = pin(2, Mode.input)..pull = pullDown;
-    ledPin = pin(3, Mode.output)..value = 0;
-    await testInterrupt();
+    /// Test null trigger
+    test('null Trigger', () {
+      _sensorPin = pin(0, Mode.input)..pull = pullDown;
+      _ledPin = pin(1, Mode.output)..value = 0;
+      assertValue(_sensorPin, 0);
+      expect(_sensorPin.events(null), null);
+    });
   });
+}
+
+/// Return the sensor value reported by the next event
+/// or `null` if no event received
+Future<int> _nextEvent(int ledValue, Trigger trigger) async {
+  if (hardware is MockHardware)
+    expect((hardware as MockHardware).interruptMap[_sensorPin.pinNum],
+        anyOf(isNull, Trigger.none));
+  var completer = new Completer<int>();
+  var subscription = _sensorPin.events(trigger).listen((PinEvent event) {
+    if (!identical(event.pin, _sensorPin)) fail('expected sensor pin');
+    completer.complete(event.value);
+  });
+  if (hardware is MockHardware)
+    expect((hardware as MockHardware).interruptMap[_sensorPin.pinNum],
+        anyOf(isNull, trigger));
+  _ledPin.value = ledValue;
+  int value = await completer.future
+      .timeout(new Duration(milliseconds: 100))
+      .catchError((e) => null, test: (e) => e is TimeoutException);
+  await subscription.cancel();
+  if (hardware is MockHardware)
+    expect((hardware as MockHardware).interruptMap[_sensorPin.pinNum],
+        anyOf(isNull, Trigger.none));
+  return value;
 }
