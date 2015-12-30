@@ -31,6 +31,13 @@ class WiringPiGPIO implements RpiGPIO {
   }
 
   @override
+  void setPull(int pinNum, Pull pull) {
+    _setPull(pinNum, pull.index);
+  }
+
+  void _setPull(int pinNum, int pull) native "setPull";
+
+  @override
   void setTrigger(int pinNum, Trigger trigger) {
     _setTrigger(pinNum, trigger.index);
   }
@@ -56,9 +63,6 @@ class WiringPiGPIO implements RpiGPIO {
 
   @override
   int physPinToGpio(int pinNum) native "physPinToGpio";
-
-  @override
-  void pullUpDnControl(int pinNum, int pud) native "pullUpDnControl";
 
   @override
   void pwmWrite(int pinNum, int pulseWidth) native "pwmWrite";

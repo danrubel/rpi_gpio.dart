@@ -202,16 +202,21 @@ void physPinToGpio(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
-// Sets the pull-up or pull-down resistor mode on the given pin.
+// Sets the pull-up or pull-down resistor mode on the given pin, where
+// pull 0 = off
+// pull 1 = pull down
+// pull 2 = pull up
 // The internal pull up/down resistors have a value of approximately 50KΩ on the Raspberry Pi.
 // The given pin should be already set as an input.
-void pullUpDnControl (Dart_NativeArguments arguments) {
+// void _setPull(int pinNum, int pull) native "setPull";
+void setPull(Dart_NativeArguments arguments) {
   Dart_EnterScope();
   Dart_Handle pin_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
   Dart_Handle pud_obj = HandleError(Dart_GetNativeArgument(arguments, 2));
   int64_t pin_num, pud;
   HandleError(Dart_IntegerToInt64(pin_obj, &pin_num));
   HandleError(Dart_IntegerToInt64(pud_obj, &pud));
+  // pull 0, 1, 2 = PUD_OFF, PUD_DOWN, PUD_UP
   pullUpDnControl(pin_num, pud);
   Dart_ExitScope();
 }
@@ -396,8 +401,8 @@ FunctionLookup function_list[] = {
   {"initInterrupts", initInterrupts},
   {"pinMode", pinMode},
   {"physPinToGpio", physPinToGpio},
-  {"pullUpDnControl", pullUpDnControl},
   {"pwmWrite", pwmWrite},
+  {"setPull", setPull},
   {"setTrigger", setTrigger},
   {"wpiPinToGpio", wpiPinToGpio},
   {NULL, NULL}

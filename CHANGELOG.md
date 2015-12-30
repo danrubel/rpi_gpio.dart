@@ -17,6 +17,7 @@
  * Renamed GpioException GPIOException
  * Renamed GpioHardware to RpiGPIO
  * Renamed RpiHardware  to WiringPiGPIO
+ * Renamed RpiGPIO.pullUpDnControl to setPull
  * Changed Pin.events from getter to a method that takes an optional parameter
  * Add Pin.physNum
  * Add Mode.other to match fletch gpio package
