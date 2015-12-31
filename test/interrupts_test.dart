@@ -26,9 +26,6 @@ Pin _sensorPin;
 Pin _ledPin;
 
 runTests() {
-  // TODO fix so that this method need not be called
-  Gpio.instance;
-
   // This test group assumes that Mode.output from wiringPi pin 1 (BMC_GPIO 18, Phys 12)
   // can trigger an interrupt on wiringPi pin 0 (BMC_GPIO 17, Phys 11),
   // and Mode.output from wiringPi pin 3 (BMC_GPIO 22, Phys 15)

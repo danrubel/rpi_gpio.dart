@@ -6,12 +6,20 @@ import 'dart:isolate';
 import 'package:rpi_gpio/gpio.dart';
 import 'package:rpi_gpio/rpi_gpio.dart';
 
+/// The API used by this library to access the underlying GPIO pins
+RpiGPIO _hardware;
+
+/// The port on which interrupt events are received
+/// or `null` if not yet initialized.
+ReceivePort _interruptEventPort;
+
 /// An internal cache of currently defined pins indexed by wiringPi pin #
 List<Pin> _pins = <Pin>[];
 
 /// Return the [Pin] representing the specified GPIO pin
 /// where [pinNum] is the wiringPi pin number.
 Pin pin(int pinNum, [Mode mode]) {
+  if (_hardware == null) throw new GPIOException('Pin.hardware must be set');
   while (_pins.length <= pinNum) _pins.add(null);
   Pin pin = _pins[pinNum];
   if (pin == null) {
@@ -25,78 +33,17 @@ Pin pin(int pinNum, [Mode mode]) {
   return pin;
 }
 
-/// [Gpio] provides access to the General Purpose I/O (GPIO) pins.
-/// Pulse width modulation can be simulated on pins other than pin 1
-/// by substituting different [RpiGPIO] implements via [hardware] method.
-class Gpio {
-  /// The single [Gpio] instance
-  /// or `null` if [instance] has not yet been called.
-  static Gpio _instance;
-
-  /// The API used by this class to access the underlying hardware
-  static RpiGPIO _hardware;
-
-  /// Set the underlying hardware API used by the [Gpio] [instance].
-  /// This may be only called once.
-  static void set hardware(RpiGPIO hardware) {
-    if (_hardware != null)
-      throw new GPIOException('Gpio.hardware has already been set');
-    _hardware = hardware;
-  }
-
-  /// The instance for accessing Raspberry Pi GPIO functionality.
-  static Gpio get instance {
-    /// Return the single [Gpio] instance.
-    if (_instance == null) _instance = new Gpio._();
-    return _instance;
-  }
-
-  /// The port on which interrupt events are received
-  /// or `null` if not yet initialized.
-  ReceivePort _interruptEventPort;
-
-  Gpio._() {
-    if (_hardware == null) throw new GPIOException('Gpio.hardware must be set');
-  }
-
-  /// If all pin event streams have been canceled/closed
-  /// then call the underlying disableAllInterrupts method
-  /// to stop forwarding interrupts.
-  void _checkDisableAllInterrupts() {
-    for (int pinNum = 0; pinNum < _pins.length; ++pinNum) {
-      var pin = _pins[pinNum];
-      if (pin != null && pin._events != null) {
-        return;
-      }
-    }
-    _hardware.disableAllInterrupts();
-    _interruptEventPort.close();
-    _interruptEventPort = null;
-  }
-
-  /// Called when a pin's state has changed.
-  void _handleInterrupt(message) {
-    if (message is int) {
-      int pinNum = message & RpiGPIO.pinNumMask;
-      if (0 <= pinNum && pinNum < _pins.length) {
-        bool value = (message & RpiGPIO.pinValueMask) != 0;
-        _pins[pinNum]._handleInterrupt(value);
-      }
-    }
-  }
-
-  /// Initialize interrupt handling if not already initialized
-  void _initInterrupts() {
-    if (_interruptEventPort == null) {
-      _interruptEventPort = new ReceivePort()..listen(_handleInterrupt);
-      _hardware.initInterrupts(_interruptEventPort.sendPort);
-    }
-  }
-}
-
 /// [Pin] represents a single GPIO pin for Raspberry Pi
 /// based upon the wiringPi library. See the top level [pin] function.
 class Pin {
+  /// Set the API used by this library to access the underlying GPIO pins.
+  /// This may be only called once.
+  static void set hardware(RpiGPIO hardware) {
+    if (_hardware != null)
+      throw new GPIOException('Pin.hardware has already been set');
+    _hardware = hardware;
+  }
+
   /// The wiringPi pin number.
   final int pinNum;
 
@@ -120,7 +67,7 @@ class Pin {
   /// Return a human readable description of this pin
   String get description {
     try {
-      return Gpio._hardware.description(pinNum);
+      return _hardware.description(pinNum);
     } catch (_) {
       return 'Pin $pinNum';
     }
@@ -137,7 +84,7 @@ class Pin {
     if (mode == Mode.other)
       throw new GPIOException('Cannot set mode other', pinNum);
     _mode = mode;
-    Gpio._hardware.setMode(pinNum, mode);
+    _hardware.setMode(pinNum, mode);
   }
 
   /// Return the state of the pin's pull up/down resistor
@@ -149,7 +96,7 @@ class Pin {
   void set pull(Pull pull) {
     if (mode != Mode.input) throw new GPIOException.invalidCall(pinNum, 'pull');
     _pull = pull != null ? pull : Pull.off;
-    Gpio._hardware.setPull(pinNum, _pull);
+    _hardware.setPull(pinNum, _pull);
   }
 
   /// Set the pulse width (0 - 1024) for the given pin.
@@ -160,21 +107,21 @@ class Pin {
       throw new GPIOException.invalidCall(pinNum, 'pulseWidth');
     if (pinNum != 1)
       throw new GPIOException('pulseWidth only supported on pin 1');
-    Gpio._hardware.setPulseWidth(pinNum, pulseWidth);
+    _hardware.setPulseWidth(pinNum, pulseWidth);
   }
 
   /// Return the digital value (false = 0 = low, true = 1 = high) for this pin.
   bool get value {
     if (mode != Mode.input)
       throw new GPIOException.invalidCall(pinNum, 'value');
-    return Gpio._hardware.getPin(pinNum);
+    return _hardware.getPin(pinNum);
   }
 
   /// Set the digital value (false = 0 = low, true = 1 = high) for this pin.
   void set value(bool value) {
     if (mode != Mode.output)
       throw new GPIOException.invalidCall(pinNum, 'value=');
-    Gpio._hardware.setPin(pinNum, value);
+    _hardware.setPin(pinNum, value);
   }
 
   /// Return a stream of pin events indicating state changes
@@ -196,14 +143,14 @@ class Pin {
         _events.addError(e);
         return;
       }
-      Gpio._instance._initInterrupts();
-      Gpio._hardware.setTrigger(pinNum, trigger);
+      _initInterrupts();
+      _hardware.setTrigger(pinNum, trigger);
       _lastInterruptValue = value;
     }, onCancel: () {
       _events.close();
       _events = null;
-      Gpio._hardware.setTrigger(pinNum, Trigger.none);
-      Gpio._instance._checkDisableAllInterrupts();
+      _hardware.setTrigger(pinNum, Trigger.none);
+      _checkDisableAllInterrupts();
     });
     return _events.stream;
   }
@@ -233,4 +180,38 @@ class PinEvent {
 
   @override
   toString() => '$pin value: $value';
+}
+
+/// If all pin event streams have been canceled/closed
+/// then call the underlying disableAllInterrupts method
+/// to stop forwarding interrupts.
+void _checkDisableAllInterrupts() {
+  for (int pinNum = 0; pinNum < _pins.length; ++pinNum) {
+    var pin = _pins[pinNum];
+    if (pin != null && pin._events != null) {
+      return;
+    }
+  }
+  _hardware.disableAllInterrupts();
+  _interruptEventPort.close();
+  _interruptEventPort = null;
+}
+
+/// Called when a pin's state has changed.
+void _handleInterrupt(message) {
+  if (message is int) {
+    int pinNum = message & RpiGPIO.pinNumMask;
+    if (0 <= pinNum && pinNum < _pins.length) {
+      bool value = (message & RpiGPIO.pinValueMask) != 0;
+      _pins[pinNum]._handleInterrupt(value);
+    }
+  }
+}
+
+/// Initialize interrupt handling if not already initialized
+void _initInterrupts() {
+  if (_interruptEventPort == null) {
+    _interruptEventPort = new ReceivePort()..listen(_handleInterrupt);
+    _hardware.initInterrupts(_interruptEventPort.sendPort);
+  }
 }

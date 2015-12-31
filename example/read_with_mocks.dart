@@ -8,11 +8,11 @@ main() async {
   if (isRaspberryPi) {
     // Initialize the underlying hardware library
     await rpi.loadLibrary();
-    Gpio.hardware = new rpi.WiringPiGPIO();
+    Pin.hardware = new rpi.WiringPiGPIO();
   } else {
     // Mock the hardware when testing
     print('>>> initializing mock hardware');
-    Gpio.hardware = new MockHardware();
+    Pin.hardware = new MockHardware();
   }
 
   for (int pinNum = 0; pinNum < 8; ++pinNum) {

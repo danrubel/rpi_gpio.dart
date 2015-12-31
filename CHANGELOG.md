@@ -14,7 +14,7 @@
  * Removed Gpio.pin method in favor of top level pin function
  * Removed RpiGPIO.gpioNum and Pin.gpioNum in favor of RpiGPIO.description
  * Moved classes similar to fletch gpio package into gpio.dart library
- * Moved Pin and related code into new gpio_pin.dart library
+ * Moved Pin and related code into new gpio_pins.dart library
  * Renamed PinMode to Mode
  * Renamed PinPull to Pull
  * Renamed GpioException           to GPIOException
@@ -24,6 +24,7 @@
  * Renamed RpiGPIO.pwmWrite        to setPulseWidth
  * Changed Pin.events from getter to a method that takes an optional parameter
  * Changed Pin.value and PinEvent.value from int to bool
+ * Changed Gpio.hardware= to Pin.hardware=
  * Added optional RpiGPIO.description method
  * Added Mode.other to match fletch gpio package
  * Added abstract GPIO class to match fletch gpio package

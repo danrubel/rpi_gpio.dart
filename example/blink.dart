@@ -12,10 +12,7 @@ main() async {
 
   // Initialize the hardware
   // See read_with_mocks.dart for testing on non-RaspberryPi platforms
-  Gpio.hardware = new WiringPiGPIO();
-
-  // TODO Remove the need to call this method for initialization
-  Gpio.instance;
+  Pin.hardware = new WiringPiGPIO();
 
   var ledPin = pin(1, Mode.output);
   for (int count = 0; count < 5; ++count) {

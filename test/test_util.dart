@@ -44,6 +44,6 @@ Future<RpiGPIO> setupHardware() async {
   // Wrap the low level or mock hardware to record, validate, and display
   // which pins are used and for what purpose.
   recording = new RecordingHardware(hardware);
-  Gpio.hardware = recording;
+  Pin.hardware = recording;
   return recording;
 }
