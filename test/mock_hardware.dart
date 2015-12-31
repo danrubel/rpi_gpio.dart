@@ -28,9 +28,33 @@ class MockHardware implements RpiGPIO {
   int get pins => 20;
 
   @override
+  String description(int pinNum) {
+    // Simulate sparse mock where this is not implemented
+    throw new NoSuchMethodError(this, new Symbol('description'), [pinNum], {});
+  }
+
+  @override
+  void disableAllInterrupts() {
+    interruptEventPort = null;
+    interruptMap = <Trigger>[null, null, null, null, null];
+  }
+
+  @override
   bool getPin(int pinNum) {
     if (0 <= pinNum && pinNum <= 4) return values[pinNum] != 0;
     throw 'digitalRead not mocked for pin $pinNum';
+  }
+
+  @override
+  void initInterrupts(SendPort port) {
+    if (interruptEventPort != null) throw 'interrupts already initialized';
+    interruptEventPort = port;
+  }
+
+  void reset() {
+    values = <int>[0, 0, 0, 0, null];
+    stateChanges = new List<StateChange>();
+    disableAllInterrupts();
   }
 
   @override
@@ -78,26 +102,6 @@ class MockHardware implements RpiGPIO {
     // validated by RecordingHardware
   }
 
-  // ========== WiringPi Specific API ======================
-
-  @override
-  void disableAllInterrupts() {
-    interruptEventPort = null;
-    interruptMap = <Trigger>[null, null, null, null, null];
-  }
-
-  @override
-  void initInterrupts(SendPort port) {
-    if (interruptEventPort != null) throw 'interrupts already initialized';
-    interruptEventPort = port;
-  }
-
-  void reset() {
-    values = <int>[0, 0, 0, 0, null];
-    stateChanges = new List<StateChange>();
-    disableAllInterrupts();
-  }
-
   @override
   void setPull(int pinNum, Pull pull) {
     if (pinNum == 4) {
@@ -126,12 +130,6 @@ class MockHardware implements RpiGPIO {
   void setTrigger(int pinNum, Trigger trigger) {
     if (interruptEventPort == null) throw 'must call initInterrupts';
     interruptMap[pinNum] = trigger;
-  }
-
-  @override
-  String description(int pinNum) {
-    // Simulate sparse mock where this is not implemented
-    throw new NoSuchMethodError(this, new Symbol('description'), [pinNum], {});
   }
 }
 

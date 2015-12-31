@@ -44,39 +44,18 @@ class RecordingHardware implements RpiGPIO {
   String description(int pinNum) => _hardware.description(pinNum);
 
   @override
-  bool getPin(int pinNum) {
-    _assertMode(pinNum, Mode.input);
-    return _hardware.getPin(pinNum);
-  }
-
-  @override
-  void setPin(int pinNum, bool value) {
-    _assertMode(pinNum, Mode.output);
-    _hardware.setPin(pinNum, value);
-  }
-
-  @override
-  void setMode(int pinNum, Mode mode) {
-    if (mode == Mode.other) throw 'Cannot set any pin to Mode.other';
-    if (_mode(pinNum) != mode) _states.add(new _PinState(pinNum, mode));
-    _hardware.setMode(pinNum, mode);
-  }
-
-  @override
-  void setTrigger(int pinNum, Trigger trigger) {
-    if (_mode(pinNum) != Mode.input) throw 'Must set Mode.input for interrupts';
-    _hardware.setTrigger(pinNum, trigger);
-  }
-
-  // ========== WiringPi Specific API ======================
-
-  @override
   void disableAllInterrupts() {
     if (_clientPort == null) throw 'disableAllInterrupts already called';
     _hardware.disableAllInterrupts();
     _hardwarePort.close();
     _hardwarePort = null;
     _clientPort = null;
+  }
+
+  @override
+  bool getPin(int pinNum) {
+    _assertMode(pinNum, Mode.input);
+    return _hardware.getPin(pinNum);
   }
 
   @override
@@ -130,6 +109,19 @@ class RecordingHardware implements RpiGPIO {
   }
 
   @override
+  void setMode(int pinNum, Mode mode) {
+    if (mode == Mode.other) throw 'Cannot set any pin to Mode.other';
+    if (_mode(pinNum) != mode) _states.add(new _PinState(pinNum, mode));
+    _hardware.setMode(pinNum, mode);
+  }
+
+  @override
+  void setPin(int pinNum, bool value) {
+    _assertMode(pinNum, Mode.output);
+    _hardware.setPin(pinNum, value);
+  }
+
+  @override
   void setPull(int pinNum, Pull pull) {
     _assertMode(pinNum, Mode.input);
     _hardware.setPull(pinNum, pull);
@@ -139,6 +131,12 @@ class RecordingHardware implements RpiGPIO {
   void setPulseWidth(int pinNum, int pulseWidth) {
     _assertMode(pinNum, Mode.output);
     _hardware.setPulseWidth(pinNum, pulseWidth);
+  }
+
+  @override
+  void setTrigger(int pinNum, Trigger trigger) {
+    if (_mode(pinNum) != Mode.input) throw 'Must set Mode.input for interrupts';
+    _hardware.setTrigger(pinNum, trigger);
   }
 
   /// Assert that the given pin has the expected mode

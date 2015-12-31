@@ -70,8 +70,6 @@ class WiringPiGPIO implements RpiGPIO {
     _setTrigger(pinNum, trigger.index);
   }
 
-  // ========== WiringPi Specific API ======================
-
   int _digitalRead(int pinNum) native "digitalRead";
 
   void _digitalWrite(int pinNum, int value) native "digitalWrite";
