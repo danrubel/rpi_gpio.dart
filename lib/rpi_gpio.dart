@@ -27,7 +27,7 @@ File get raspberryPiMarkerFile =>
 /// down resistor connected.
 enum Pull { off, down, up }
 
-/// API used by [Gpio] for accessing the underlying hardware.
+/// GPIO interface used for accessing GPIO on the Raspberry Pi.
 abstract class RpiGPIO implements GPIO {
   /// Bit mask used for extracting the pin # from the interrupt event.
   /// See [initInterrupts].
@@ -51,10 +51,10 @@ abstract class RpiGPIO implements GPIO {
   /// Each message is an int indicating the pin on which the interrupt occurred
   /// and the value of that pin at the time of the interrupt:
   ///
-  ///     int message = pinNum | (pinValue ? GpioHardware.pinValueMask : 0);
+  ///     int message = pinNum | (pinValue ? RpiGPIO.pinValueMask : 0);
   ///
-  ///     int pinNum = message & GpioHardware.pinNumMask;
-  ///     bool pinValue = (message & GpioHardware.pinValueMask) != 0;
+  ///     int pinNum = message & RpiGPIO.pinNumMask;
+  ///     bool pinValue = (message & RpiGPIO.pinValueMask) != 0;
   ///
   /// Throws an exception if interrupts have already been initialized.
   void initInterrupts(SendPort port);

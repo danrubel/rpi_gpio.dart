@@ -11,7 +11,7 @@ import 'read_write_test.dart' as read;
 import 'test_util.dart';
 
 main() async {
-  await setupHardware();
+  await setupGPIO();
   runTests();
 }
 

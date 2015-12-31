@@ -7,7 +7,7 @@ import 'package:rpi_gpio/gpio_pins.dart';
 import 'package:rpi_gpio/rpi_gpio.dart';
 import 'package:test/test.dart';
 
-import 'mock_hardware.dart';
+import 'mock_gpio.dart';
 import 'test_util.dart';
 
 // Current test hardware configuration:
@@ -18,7 +18,7 @@ import 'test_util.dart';
 // pin 0 = a photo resistor detecting the state of the LED on pin 1
 
 main() async {
-  await setupHardware();
+  await setupGPIO();
   runTests();
 }
 
@@ -69,7 +69,7 @@ runTests() {
 
       // There should not be a falling event... but there is... why?
       //expect(await _nextEvent(false, Trigger.rising), null);
-      if (hardware is MockHardware)
+      if (gpio is MockGPIO)
         expect(await _nextEvent(false, Trigger.rising), null);
       else
         expect(await _nextEvent(false, Trigger.rising), false);
@@ -128,24 +128,24 @@ runTests() {
 /// Return the sensor value reported by the next event
 /// or `null` if no event received
 Future<bool> _nextEvent(bool ledValue, Trigger trigger) async {
-  if (hardware is MockHardware)
-    expect((hardware as MockHardware).interruptMap[_sensorPin.pinNum],
+  if (gpio is MockGPIO)
+    expect((gpio as MockGPIO).interruptMap[_sensorPin.pinNum],
         anyOf(isNull, Trigger.none));
   var completer = new Completer<bool>();
   var subscription = _sensorPin.events(trigger).listen((PinEvent event) {
     if (!identical(event.pin, _sensorPin)) fail('expected sensor pin');
     completer.complete(event.value);
   });
-  if (hardware is MockHardware)
-    expect((hardware as MockHardware).interruptMap[_sensorPin.pinNum],
+  if (gpio is MockGPIO)
+    expect((gpio as MockGPIO).interruptMap[_sensorPin.pinNum],
         anyOf(isNull, trigger));
   _ledPin.value = ledValue;
   bool value = await completer.future
       .timeout(new Duration(milliseconds: 100))
       .catchError((e) => null, test: (e) => e is TimeoutException);
   await subscription.cancel();
-  if (hardware is MockHardware)
-    expect((hardware as MockHardware).interruptMap[_sensorPin.pinNum],
+  if (gpio is MockGPIO)
+    expect((gpio as MockGPIO).interruptMap[_sensorPin.pinNum],
         anyOf(isNull, Trigger.none));
   return value;
 }

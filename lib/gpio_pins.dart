@@ -7,7 +7,7 @@ import 'package:rpi_gpio/gpio.dart';
 import 'package:rpi_gpio/rpi_gpio.dart';
 
 /// The API used by this library to access the underlying GPIO pins
-RpiGPIO _hardware;
+RpiGPIO _gpio;
 
 /// The port on which interrupt events are received
 /// or `null` if not yet initialized.
@@ -19,7 +19,7 @@ List<Pin> _pins = <Pin>[];
 /// Return the [Pin] representing the specified GPIO pin
 /// where [pinNum] is the wiringPi pin number.
 Pin pin(int pinNum, [Mode mode]) {
-  if (_hardware == null) throw new GPIOException('Pin.hardware must be set');
+  if (_gpio == null) throw new GPIOException('Pin.gpio must be set');
   while (_pins.length <= pinNum) _pins.add(null);
   Pin pin = _pins[pinNum];
   if (pin == null) {
@@ -38,10 +38,10 @@ Pin pin(int pinNum, [Mode mode]) {
 class Pin {
   /// Set the API used by this library to access the underlying GPIO pins.
   /// This may be only called once.
-  static void set hardware(RpiGPIO hardware) {
-    if (_hardware != null)
-      throw new GPIOException('Pin.hardware has already been set');
-    _hardware = hardware;
+  static void set gpio(RpiGPIO gpio) {
+    if (_gpio != null)
+      throw new GPIOException('Pin.gpio has already been set');
+    _gpio = gpio;
   }
 
   /// The wiringPi pin number.
@@ -67,7 +67,7 @@ class Pin {
   /// Return a human readable description of this pin
   String get description {
     try {
-      return _hardware.description(pinNum);
+      return _gpio.description(pinNum);
     } catch (_) {
       return 'Pin $pinNum';
     }
@@ -84,7 +84,7 @@ class Pin {
     if (mode == Mode.other)
       throw new GPIOException('Cannot set mode other', pinNum);
     _mode = mode;
-    _hardware.setMode(pinNum, mode);
+    _gpio.setMode(pinNum, mode);
   }
 
   /// Return the state of the pin's pull up/down resistor
@@ -96,7 +96,7 @@ class Pin {
   void set pull(Pull pull) {
     if (mode != Mode.input) throw new GPIOException.invalidCall(pinNum, 'pull');
     _pull = pull != null ? pull : Pull.off;
-    _hardware.setPull(pinNum, _pull);
+    _gpio.setPull(pinNum, _pull);
   }
 
   /// Set the pulse width (0 - 1024) for the given pin.
@@ -107,21 +107,21 @@ class Pin {
       throw new GPIOException.invalidCall(pinNum, 'pulseWidth');
     if (pinNum != 1)
       throw new GPIOException('pulseWidth only supported on pin 1');
-    _hardware.setPulseWidth(pinNum, pulseWidth);
+    _gpio.setPulseWidth(pinNum, pulseWidth);
   }
 
   /// Return the digital value (false = 0 = low, true = 1 = high) for this pin.
   bool get value {
     if (mode != Mode.input)
       throw new GPIOException.invalidCall(pinNum, 'value');
-    return _hardware.getPin(pinNum);
+    return _gpio.getPin(pinNum);
   }
 
   /// Set the digital value (false = 0 = low, true = 1 = high) for this pin.
   void set value(bool value) {
     if (mode != Mode.output)
       throw new GPIOException.invalidCall(pinNum, 'value=');
-    _hardware.setPin(pinNum, value);
+    _gpio.setPin(pinNum, value);
   }
 
   /// Return a stream of pin events indicating state changes
@@ -144,12 +144,12 @@ class Pin {
         return;
       }
       _initInterrupts();
-      _hardware.setTrigger(pinNum, trigger);
+      _gpio.setTrigger(pinNum, trigger);
       _lastInterruptValue = value;
     }, onCancel: () {
       _events.close();
       _events = null;
-      _hardware.setTrigger(pinNum, Trigger.none);
+      _gpio.setTrigger(pinNum, Trigger.none);
       _checkDisableAllInterrupts();
     });
     return _events.stream;
@@ -192,7 +192,7 @@ void _checkDisableAllInterrupts() {
       return;
     }
   }
-  _hardware.disableAllInterrupts();
+  _gpio.disableAllInterrupts();
   _interruptEventPort.close();
   _interruptEventPort = null;
 }
@@ -212,6 +212,6 @@ void _handleInterrupt(message) {
 void _initInterrupts() {
   if (_interruptEventPort == null) {
     _interruptEventPort = new ReceivePort()..listen(_handleInterrupt);
-    _hardware.initInterrupts(_interruptEventPort.sendPort);
+    _gpio.initInterrupts(_interruptEventPort.sendPort);
   }
 }

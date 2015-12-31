@@ -14,13 +14,13 @@ import 'test_util.dart';
 /// pin 2 = a photo resistor detecting the state of the LED on pin 3
 /// pin 1 = an LED (1 = on, 0 = off)
 /// pin 0 = a photo resistor detecting the state of the LED on pin 1
-class MockHardware implements RpiGPIO {
+class MockGPIO implements RpiGPIO {
   List<int> values;
   List<StateChange> stateChanges;
   SendPort interruptEventPort;
   List<Trigger> interruptMap;
 
-  MockHardware() {
+  MockGPIO() {
     reset();
   }
 

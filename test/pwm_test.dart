@@ -10,7 +10,7 @@ import 'package:test/test.dart';
 import 'test_util.dart';
 
 main() async {
-  await setupHardware();
+  await setupGPIO();
   runTests();
 }
 

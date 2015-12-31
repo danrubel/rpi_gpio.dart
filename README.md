@@ -48,18 +48,19 @@ to compile the native librpi_gpio_ext.so library for the rpi_gpio package.
 ## Examples
 
  * A [read pins](example/read.dart) example demonstrates reading
-   the current value for multiple pins.
+   the current value for multiple pins
+   using the high level [__gpio_pins__](lib/gpio_pins.dart) library.
 
  * A second [read pins](example/read_with_mocks.dart) example
-   demonstrates mocking the hardware so that the logic can be run
-   and tested on platforms other than the Raspberry Pi.
+   demonstrates mocking the hardware so that the logic can be run and tested
+   on platforms other than the Raspberry Pi.
 
  * A [blinking LED](example/blink.dart) example
    and a [motor driver](example/pwm_motor_sample.dart) example
-   demonstrate using the [high level GPIO library](lib/rpi_gpio.dart).
+   demonstrate using the high level [__gpio_pins__](lib/gpio_pins.dart) library.
 
  * A second [blinking LED](example/blink_hardware_api.dart)
-   demonstrates using the [low level hardware API](lib/rpi_hardware.dart).
+   demonstrates using the low level [__WiringPiGPIO__](lib/wiringpi_gpio.dart) API.
 
  * The value of GPIO pins can be tracked over time
    via [interrupts](example/interrupts.dart)

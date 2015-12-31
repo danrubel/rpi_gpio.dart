@@ -5,7 +5,7 @@ import 'package:rpi_gpio/gpio_pins.dart';
 import 'package:rpi_gpio/rpi_gpio.dart';
 import 'package:test/test.dart';
 
-import 'mock_hardware.dart';
+import 'mock_gpio.dart';
 import 'test_util.dart';
 
 // Current test hardware configuration:
@@ -16,7 +16,7 @@ import 'test_util.dart';
 // pin 0 = a photo resistor detecting the state of the LED on pin 1
 
 main() async {
-  await setupHardware();
+  await setupGPIO();
   runTests();
 }
 
@@ -100,16 +100,16 @@ runTests() {
   });
 
   test('description', () {
-    if (hardware is MockHardware) {
+    if (gpio is MockGPIO) {
       expect(pin(0, Mode.input).description, 'Pin 0');
       expect(pin(1, Mode.input).description, 'Pin 1');
-      // expect(hardware.description(0), 'Pin 0');
-      // expect(hardware.description(1), 'Pin 1');
+      // expect(gpio.description(0), 'Pin 0');
+      // expect(gpio.description(1), 'Pin 1');
     } else {
-      expect(hardware.description(0), 'Pin 0 (BMC_GPIO 17, Phys 11)');
-      expect(hardware.description(1), 'Pin 1 (BMC_GPIO 18, Phys 12, PWM)');
-      expect(pin(0, Mode.input).description, hardware.description(0));
-      expect(pin(1, Mode.input).description, hardware.description(1));
+      expect(gpio.description(0), 'Pin 0 (BMC_GPIO 17, Phys 11)');
+      expect(gpio.description(1), 'Pin 1 (BMC_GPIO 18, Phys 12, PWM)');
+      expect(pin(0, Mode.input).description, gpio.description(0));
+      expect(pin(1, Mode.input).description, gpio.description(1));
     }
   });
 }

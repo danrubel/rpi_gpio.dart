@@ -10,9 +10,9 @@ import 'package:rpi_gpio/wiringpi_gpio.dart';
 /// * pin 0 = a photo resistor detecting the state of the LED on pin 1
 main() async {
 
-  // Initialize the hardware
+  // Initialize the GPIO API
   // See read_with_mocks.dart for testing on non-RaspberryPi platforms
-  Pin.hardware = new WiringPiGPIO();
+  Pin.gpio = new WiringPiGPIO();
 
   var stopwatch = new Stopwatch()..start();
 

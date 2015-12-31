@@ -20,11 +20,13 @@
  * Renamed GpioException           to GPIOException
  * Renamed GpioHardware            to RpiGPIO
  * Renamed RpiHardware             to WiringPiGPIO
+ * Renamed MockHardware            to MockGPIO
+ * Renamed RecordingHardware       to RecordingGPIO
  * Renamed RpiGPIO.pullUpDnControl to setPull
  * Renamed RpiGPIO.pwmWrite        to setPulseWidth
  * Changed Pin.events from getter to a method that takes an optional parameter
  * Changed Pin.value and PinEvent.value from int to bool
- * Changed Gpio.hardware= to Pin.hardware=
+ * Changed Gpio.hardware= to Pin.gpio=
  * Added optional RpiGPIO.description method
  * Added Mode.other to match fletch gpio package
  * Added abstract GPIO class to match fletch gpio package

@@ -1,4 +1,4 @@
-library test.hardware.blink;
+library test.gpio.pwm_motor;
 
 import 'dart:async';
 
@@ -15,7 +15,7 @@ import 'package:rpi_gpio/wiringpi_gpio.dart';
 /// GPIO 1 (BMC_GPIO 18, Physical Pin 12) uses hardware pwm.
 /// GPIO 2 (BMC_GPIO 27, Physical Pin 13) uses software pwm.
 main() async {
-  Pin.hardware = new WiringPiGPIO();
+  Pin.gpio = new WiringPiGPIO();
 
   var pin1 = pin(1, Mode.output);
   var pin2 = pin(2, Mode.output);

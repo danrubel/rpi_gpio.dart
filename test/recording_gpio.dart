@@ -6,7 +6,7 @@ import 'package:rpi_gpio/gpio.dart';
 import 'package:rpi_gpio/gpio_pins.dart';
 import 'package:rpi_gpio/rpi_gpio.dart';
 
-class NoOpHardware extends RpiGPIO {
+class NoOpGPIO extends RpiGPIO {
   @override int get pins => 0;
   @override String description(int pinNum) => 'Pin $pinNum';
   @override void disableAllInterrupts() {}
@@ -23,9 +23,9 @@ class NoOpHardware extends RpiGPIO {
 /// validates that the operation is appropriate for the current mode,
 /// and optionally forwards the requests to the underlying hardware.
 /// Usage can be displayed via [printUsage].
-class RecordingHardware implements RpiGPIO {
-  final RpiGPIO _hardware;
-  ReceivePort _hardwarePort;
+class RecordingGPIO implements RpiGPIO {
+  final RpiGPIO _gpio;
+  ReceivePort _gpioPort;
   SendPort _clientPort;
 
   /// A sequence of pin mode changes.
@@ -34,42 +34,42 @@ class RecordingHardware implements RpiGPIO {
   /// A sequence of hardware events
   List _events = [];
 
-  RecordingHardware([RpiGPIO hardware])
-      : _hardware = hardware != null ? hardware : new NoOpHardware();
+  RecordingGPIO([RpiGPIO gpio])
+      : _gpio = gpio != null ? gpio : new NoOpGPIO();
 
   @override
-  int get pins => _hardware.pins;
+  int get pins => _gpio.pins;
 
   @override
-  String description(int pinNum) => _hardware.description(pinNum);
+  String description(int pinNum) => _gpio.description(pinNum);
 
   @override
   void disableAllInterrupts() {
     if (_clientPort == null) throw 'disableAllInterrupts already called';
-    _hardware.disableAllInterrupts();
-    _hardwarePort.close();
-    _hardwarePort = null;
+    _gpio.disableAllInterrupts();
+    _gpioPort.close();
+    _gpioPort = null;
     _clientPort = null;
   }
 
   @override
   bool getPin(int pinNum) {
     _assertMode(pinNum, Mode.input);
-    return _hardware.getPin(pinNum);
+    return _gpio.getPin(pinNum);
   }
 
   @override
   void initInterrupts(SendPort port) {
     if (_clientPort != null) throw 'initInterrupts already called';
     _clientPort = port;
-    _hardwarePort = new ReceivePort()
+    _gpioPort = new ReceivePort()
       ..listen((message) {
         int pinNum = message & RpiGPIO.pinNumMask;
         int pinValue = (message & RpiGPIO.pinValueMask) != 0 ? 1 : 0;
         _events.add('pin $pinNum value $pinValue');
         _clientPort.send(message);
       });
-    _hardware.initInterrupts(_hardwarePort.sendPort);
+    _gpio.initInterrupts(_gpioPort.sendPort);
   }
 
   void printUsage() {
@@ -112,31 +112,31 @@ class RecordingHardware implements RpiGPIO {
   void setMode(int pinNum, Mode mode) {
     if (mode == Mode.other) throw 'Cannot set any pin to Mode.other';
     if (_mode(pinNum) != mode) _states.add(new _PinState(pinNum, mode));
-    _hardware.setMode(pinNum, mode);
+    _gpio.setMode(pinNum, mode);
   }
 
   @override
   void setPin(int pinNum, bool value) {
     _assertMode(pinNum, Mode.output);
-    _hardware.setPin(pinNum, value);
+    _gpio.setPin(pinNum, value);
   }
 
   @override
   void setPull(int pinNum, Pull pull) {
     _assertMode(pinNum, Mode.input);
-    _hardware.setPull(pinNum, pull);
+    _gpio.setPull(pinNum, pull);
   }
 
   @override
   void setPulseWidth(int pinNum, int pulseWidth) {
     _assertMode(pinNum, Mode.output);
-    _hardware.setPulseWidth(pinNum, pulseWidth);
+    _gpio.setPulseWidth(pinNum, pulseWidth);
   }
 
   @override
   void setTrigger(int pinNum, Trigger trigger) {
     if (_mode(pinNum) != Mode.input) throw 'Must set Mode.input for interrupts';
-    _hardware.setTrigger(pinNum, trigger);
+    _gpio.setTrigger(pinNum, trigger);
   }
 
   /// Assert that the given pin has the expected mode

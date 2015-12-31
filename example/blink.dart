@@ -1,4 +1,4 @@
-library test.hardware.blink;
+library test.gpio.blink;
 
 import 'dart:async';
 
@@ -10,9 +10,9 @@ import 'package:rpi_gpio/wiringpi_gpio.dart';
 /// connected to Pin 1 (BMC_GPIO 18, Physical Pin 12).
 main() async {
 
-  // Initialize the hardware
+  // Initialize the GPIO used
   // See read_with_mocks.dart for testing on non-RaspberryPi platforms
-  Pin.hardware = new WiringPiGPIO();
+  Pin.gpio = new WiringPiGPIO();
 
   var ledPin = pin(1, Mode.output);
   for (int count = 0; count < 5; ++count) {

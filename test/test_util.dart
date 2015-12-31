@@ -7,14 +7,14 @@ import 'package:rpi_gpio/rpi_gpio.dart';
 import 'package:rpi_gpio/wiringpi_gpio.dart' deferred as wiringpi;
 import 'package:test/test.dart';
 
-import 'mock_hardware.dart';
-import 'recording_hardware.dart';
+import 'mock_gpio.dart';
+import 'recording_gpio.dart';
 
-/// Hardware for testing
-RpiGPIO hardware;
+/// GPIO API for testing
+RpiGPIO gpio;
 
 /// Recording hardware for testing
-RecordingHardware recording;
+RecordingGPIO recording;
 
 DateTime get now => new DateTime.now();
 
@@ -27,23 +27,23 @@ assertValue(Pin pin, bool expectedValue) {
   fail('Expected $expectedValue on $pin');
 }
 
-/// Setup hardware for testing
-Future<RpiGPIO> setupHardware() async {
+/// Setup GPIO for testing
+Future<RpiGPIO> setupGPIO() async {
   if (recording != null) return recording;
 
   // Load the Raspberry Pi native method library if running on the RPi
   // otherwise create mock hardware for testing code on other platforms.
   if (isRaspberryPi) {
     await wiringpi.loadLibrary();
-    hardware = new wiringpi.WiringPiGPIO();
+    gpio = new wiringpi.WiringPiGPIO();
   } else {
     print('>>> initializing mock hardware');
-    hardware = new MockHardware();
+    gpio = new MockGPIO();
   }
 
-  // Wrap the low level or mock hardware to record, validate, and display
+  // Wrap the low level or mock GPIO to record, validate, and display
   // which pins are used and for what purpose.
-  recording = new RecordingHardware(hardware);
-  Pin.hardware = recording;
+  recording = new RecordingGPIO(gpio);
+  Pin.gpio = recording;
   return recording;
 }

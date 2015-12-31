@@ -6,13 +6,13 @@ import 'package:rpi_gpio/wiringpi_gpio.dart' deferred as rpi;
 /// Read current values for pins 0 - 7
 main() async {
   if (isRaspberryPi) {
-    // Initialize the underlying hardware library
+    // Initialize the underlying GPIO API library
     await rpi.loadLibrary();
-    Pin.hardware = new rpi.WiringPiGPIO();
+    Pin.gpio = new rpi.WiringPiGPIO();
   } else {
-    // Mock the hardware when testing
-    print('>>> initializing mock hardware');
-    Pin.hardware = new MockHardware();
+    // Mock the GPIO library when testing
+    print('>>> initializing mock GPIO');
+    Pin.gpio = new MockGPIO();
   }
 
   for (int pinNum = 0; pinNum < 8; ++pinNum) {
@@ -21,8 +21,8 @@ main() async {
   }
 }
 
-/// Simulate hardware when testing.
-class MockHardware implements RpiGPIO {
+/// Simulate GPIO API when testing.
+class MockGPIO implements RpiGPIO {
   /// Simulate all pins return value of 1 (high).
   @override
   bool getPin(int pin) => true;

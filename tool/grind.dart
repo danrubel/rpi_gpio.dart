@@ -37,6 +37,6 @@ void coverage() {
 @Task()
 Future test() async {
   print(Directory.current);
-  await setupHardware();
+  await setupGPIO();
   new TestRunner().testAsync(files: 'test/all.dart');
 }

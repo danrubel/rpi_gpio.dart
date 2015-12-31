@@ -1,4 +1,4 @@
-library test.hardware.blink;
+library test.gpio.blink;
 
 import 'dart:async';
 
@@ -11,14 +11,14 @@ import 'package:rpi_gpio/wiringpi_gpio.dart';
 /// Typically, users access the GPIO pins via package:rpi_gpio/rpi_gpio.dart
 /// as shown in the blink.dart rather than using this lower level API.
 main() async {
-  // Directly access the hardware API
-  var hardware = new WiringPiGPIO();
+  // Directly access the GPIO API
+  var gpio = new WiringPiGPIO();
 
-  hardware.setMode(1, Mode.output);
+  gpio.setMode(1, Mode.output);
   for (int count = 0; count < 5; ++count) {
-    hardware.setPin(1, true);
+    gpio.setPin(1, true);
     await _delay(1000);
-    hardware.setPin(1, false);
+    gpio.setPin(1, false);
     await _delay(1000);
   }
 }

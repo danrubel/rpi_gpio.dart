@@ -15,7 +15,7 @@ import 'test_util.dart';
 // pin 0 = a photo resistor detecting the state of the LED on pin 1
 
 main() async {
-  await setupHardware();
+  await setupGPIO();
   runTests();
 }
 
