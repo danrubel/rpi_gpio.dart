@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:rpi_gpio/rpi_gpio.dart';
+import 'package:rpi_gpio/gpio.dart';
+import 'package:rpi_gpio/gpio_pins.dart';
 import 'package:rpi_gpio/wiringpi_gpio.dart';
 
 /// Use interrupts to monitor the state change on a given pin

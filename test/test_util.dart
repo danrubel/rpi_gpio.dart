@@ -2,8 +2,9 @@ library test.rpi_gpio.util;
 
 import 'dart:async';
 
+import 'package:rpi_gpio/gpio_pins.dart';
 import 'package:rpi_gpio/rpi_gpio.dart';
-import 'package:rpi_gpio/wiringpi_gpio.dart' deferred as rpi;
+import 'package:rpi_gpio/wiringpi_gpio.dart' deferred as wiringpi;
 import 'package:test/test.dart';
 
 import 'mock_hardware.dart';
@@ -33,8 +34,8 @@ Future<RpiGPIO> setupHardware() async {
   // Load the Raspberry Pi native method library if running on the RPi
   // otherwise create mock hardware for testing code on other platforms.
   if (isRaspberryPi) {
-    await rpi.loadLibrary();
-    hardware = new rpi.WiringPiGPIO();
+    await wiringpi.loadLibrary();
+    hardware = new wiringpi.WiringPiGPIO();
   } else {
     print('>>> initializing mock hardware');
     hardware = new MockHardware();

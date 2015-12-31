@@ -1,7 +1,8 @@
 # Changelog
 
 ## 0.3.0
- * BREAKING CHANGES to match the [fletch gpio package](https://github.com/dart-lang/fletch/blob/master/pkg/gpio/lib/gpio.dart)
+ * BREAKING CHANGES so that the rpi_gpio package much more closely matches
+    [fletch gpio package](https://github.com/dart-lang/fletch/blob/master/pkg/gpio/lib/gpio.dart)
  * Removed GpioHardware.pinMode         in favor of GPIO.setMode
  * Removed GpioHardware.digitalRead     in favor of GPIO.getPin
  * Removed GpioHardware.digitalWrite    in favor of GPIO.setPin
@@ -12,7 +13,8 @@
  * Removed top level pullup, pulldown, pullOff const
  * Removed Gpio.pin method in favor of top level pin function
  * Removed RpiGPIO.gpioNum and Pin.gpioNum in favor of RpiGPIO.description
- * Move classes similar to fletch gpio package into gpio.dart library
+ * Moved classes similar to fletch gpio package into gpio.dart library
+ * Moved Pin and related code into new gpio_pin.dart library
  * Renamed PinMode to Mode
  * Renamed PinPull to Pull
  * Renamed GpioException           to GPIOException

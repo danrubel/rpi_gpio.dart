@@ -2,6 +2,8 @@ library test.rpi_gpio.recording;
 
 import 'dart:isolate';
 
+import 'package:rpi_gpio/gpio.dart';
+import 'package:rpi_gpio/gpio_pins.dart';
 import 'package:rpi_gpio/rpi_gpio.dart';
 
 class NoOpHardware extends RpiGPIO {

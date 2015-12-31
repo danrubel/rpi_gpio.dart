@@ -1,4 +1,5 @@
-import 'package:rpi_gpio/rpi_gpio.dart';
+import 'package:rpi_gpio/gpio.dart';
+import 'package:rpi_gpio/gpio_pins.dart';
 import 'package:rpi_gpio/wiringpi_gpio.dart';
 
 /// Read current values for pins 0 - 7

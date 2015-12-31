@@ -4,19 +4,20 @@
 [![Build Status](https://travis-ci.org/danrubel/rpi_gpio.dart.svg?branch=master)](https://travis-ci.org/danrubel/rpi_gpio.dart)
 [![Coverage Status](https://coveralls.io/repos/danrubel/rpi_gpio.dart/badge.svg?branch=master&service=github)](https://coveralls.io/github/danrubel/rpi_gpio.dart?branch=master)
 
-rpi_gpio is a Dart library for accessing the Raspberry Pi GPIO pins.
+rpi_gpio is a Dart package for accessing the Raspberry Pi GPIO pins.
 
 ## Overview
 
- * [__Gpio__](lib/rpi_gpio.dart) provides a high level API for accessing
-   the various General Purpose I/O pins on the Raspberry Pi.
+ * The [__gpio_pin__](lib/gpio_pins.dart) library provides __Pin__ objects
+   for accessing the various General Purpose I/O pins on the Raspberry Pi.
 
  * [__WiringPiGPIO__](lib/wiringpi_gpio.dart) provides a low level API
-   for accessing the GPIO pins.
+   for accessing the GPIO pins on the Raspberry Pi
+   using the [WiringPi](http://wiringpi.com/) library.
 
 ## Setup
 
-The rpi_gpio library accesses the GPIO pins using a native library written
+[__WiringPiGPIO__](lib/wiringpi_gpio.dart) accesses the GPIO pins using a native library written
 in C and built on top of the [wiringPi](http://wiringpi.com/) library.
 For security reasons, authors cannot publish binary content
 to [pub.dartlang.org](https://pub.dartlang.org/), so there are some extra

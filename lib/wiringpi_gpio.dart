@@ -2,6 +2,7 @@ library wiringpi_gpio;
 
 import 'dart:isolate';
 
+import 'package:rpi_gpio/gpio.dart';
 import 'package:rpi_gpio/rpi_gpio.dart';
 
 import 'dart-ext:rpi_gpio_ext';

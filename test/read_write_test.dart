@@ -1,5 +1,7 @@
 library test.rpi_gpio.read_write;
 
+import 'package:rpi_gpio/gpio.dart';
+import 'package:rpi_gpio/gpio_pins.dart';
 import 'package:rpi_gpio/rpi_gpio.dart';
 import 'package:test/test.dart';
 

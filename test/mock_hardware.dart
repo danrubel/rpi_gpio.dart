@@ -2,6 +2,7 @@ library test.rpi_gpio.mock;
 
 import 'dart:isolate';
 
+import 'package:rpi_gpio/gpio.dart';
 import 'package:rpi_gpio/rpi_gpio.dart';
 
 import 'test_util.dart';
