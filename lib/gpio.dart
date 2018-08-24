@@ -1,59 +1,94 @@
-library gpio;
+import 'dart:async';
+
+import 'package:rpi_gpio/src/gpio_const.dart';
 
 /// Base GPIO interface supported by all GPIO implementations.
-abstract class GPIO {
-  /// The default number of pins for wiringPi GPIO is 20.
-  static const int defaultPins = 20;
+abstract class Gpio {
+  final _allocatedPins = <int>[];
+  final _allocatedPwmPorts = <int>[-1, -1];
 
-  /// Number of pins exposed by this GPIO.
-  int get pins;
+  /// Return a GPIO pin configured for input,
+  /// where [physicalPin] is the physical pin number not the GPIO number.
+  GpioInput input(int physicalPin, [Pull pull = Pull.off]);
 
-  /// Get the value of the [pin].
-  /// The boolean value [true] represents high (1)
-  /// and the boolean value [false] represents low (0).
-  /// The pin mode should already be set to [Mode.input].
-  bool getPin(int pin);
+  /// Return a GPIO pin configured for output,
+  /// where [physicalPin] is the physical pin number not the GPIO number.
+  GpioOutput output(int physicalPin);
 
-  /// Set the mode of [pin] to [mode]
-  /// where [mode] can be [Mode.input] or [Mode.output].
-  void setMode(int pin, Mode mode);
+  /// Return a GPIO pin configured for pulse width modulation output,
+  /// where [physicalPin] is the physical pin number not the GPIO number.
+  GpioPwmOutput pwmOutput(int physicalPin);
 
-  /// Set the value of the [pin] to [value].
-  /// The boolean value [true] represents high (1)
-  /// and the boolean value [false] represents low (0).
-  /// The pin mode should already be set to [Mode.output].
-  void setPin(int pin, bool value);
+  /// Set the polling frequency for any [GpioInput.values] streams.
+  /// The default polling frequency is every 10 milliseconds.
+  /// Pass `null` to turn off polling.
+  set pollingFrequency(Duration frequency);
+
+  /// Check that the pin can be used for GPIO
+  /// and that is has not already been allocated.
+  /// This should be called by subclasses not clients.
+  void allocatePin(int physicalPin) {
+    if (physicalPin < 0 ||
+        physicalPin >= physToBcmGpioRPi2.length ||
+        physToBcmGpioRPi2[physicalPin] < 0) {
+      throw new GpioException('Invalid pin', physicalPin);
+    }
+    if (_allocatedPins.contains(physicalPin)) {
+      throw new GpioException('Already allocated', physicalPin);
+    }
+    _allocatedPins.add(physicalPin);
+  }
+
+  /// Check that the pin can be used for PWM output
+  /// and that is has not already been allocated.
+  /// This should be called by subclasses not clients.
+  void allocatePwmPin(int physicalPin) {
+    if (physicalPin < 0 || physicalPin >= physToPwmPort.length)
+      throw new GpioException('Invalid pin', physicalPin);
+
+    int pwmPort = physToPwmPort[physicalPin];
+    if (pwmPort == -1) throw new GpioException('Invalid PWM pin', physicalPin);
+    if (_allocatedPwmPorts[pwmPort] != -1)
+      throw new GpioException(
+          'PWM port $pwmPort already allocated'
+          ' to pin ${_allocatedPwmPorts[pwmPort]}',
+          physicalPin);
+
+    allocatePin(physicalPin);
+    _allocatedPwmPorts[pwmPort]=physicalPin;
+  }
 }
+
+/// A GPIO input pin.
+abstract class GpioInput {
+  bool get value;
+
+  /// When the value of the input changes,
+  /// the new value is appended to the returned stream.
+  Stream<bool> get values;
+}
+
+/// A GPIO output pin.
+abstract class GpioOutput {
+  set value(bool newValue);
+}
+
+/// A GPIO output pin with pulse width modulation.
+abstract class GpioPwmOutput extends GpioOutput {
+  set pwmValue(int newValue);
+}
+
+/// A [GpioInput] can have an internal pull up or pull down resistor.
+enum Pull { off, down, up }
 
 /// Exceptions thrown by GPIO.
-class GPIOException {
-  /// Exception message.
+class GpioException {
   final String message;
-  final int pinNum;
+  final int physicalPin;
 
-  GPIOException(this.message, [this.pinNum]);
-
-  GPIOException.invalidCall(this.pinNum, String selector)
-      : message = 'Invalid call: $selector for mode';
+  GpioException(this.message, [this.physicalPin]);
 
   @override
-  String toString() => '$message pin: $pinNum';
+  String toString() =>
+      physicalPin != null ? '$message pin: $physicalPin' : message;
 }
-
-/// A GPIO pin can be set to receive [input] and interrupts, have a particular
-/// [output] value or pulseWidth, or be in some [other] mode.
-enum Mode {
-  input,
-  output,
-
-  /// GPIO has functions other than [input] and [output]. Most GPIO pins have
-  /// several special functions, so when in that mode this value can be
-  /// returned. This value cannot be used when setting the mode.
-  other
-}
-
-/// A GPIO pin can be set to receive interrupts
-/// on the [rising] edge (was `false` and becomes `true`),
-/// on the [falling] edge (was `true` and becomes `false`),
-/// or [both].
-enum Trigger { none, rising, falling, both, }

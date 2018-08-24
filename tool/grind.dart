@@ -12,7 +12,6 @@ void analyze() {
   Analyzer.analyze(['.']);
 }
 
-
 @DefaultTask()
 @Depends(analyze, test, coverage)
 void buildbot() => null;
@@ -24,8 +23,10 @@ void coverage() {
     PubApp coverallsApp = new PubApp.global('dart_coveralls');
     coverallsApp.run([
       'report',
-      '--token', coverageToken,
-      '--retry', '2',
+      '--token',
+      coverageToken,
+      '--retry',
+      '2',
       '--exclude-test-files',
       'test/all.dart'
     ]);
@@ -37,6 +38,7 @@ void coverage() {
 @Task()
 Future test() async {
   print(Directory.current);
-  await setupGPIO();
-  new TestRunner().testAsync(files: 'test/all.dart');
+  if (isRaspberryPi) {
+    new TestRunner().testAsync(files: 'test/all.dart');
+  }
 }

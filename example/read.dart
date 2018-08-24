@@ -1,16 +1,16 @@
 import 'package:rpi_gpio/gpio.dart';
-import 'package:rpi_gpio/gpio_pins.dart';
-import 'package:rpi_gpio/wiringpi_gpio.dart';
+import 'package:rpi_gpio/rpi_gpio.dart';
 
-/// Read current values for pins 0 - 7
+/// Read some pin values.
 main() async {
+  final gpio = new RpiGpio();
+  final inputs = <int, GpioInput>{};
 
-  // Initialize the GPIO API
-  // See read_with_mocks.dart for testing on non-RaspberryPi platforms
-  Pin.gpio = new WiringPiGPIO();
+  const [3, 5, 7, 11, 12, 13].forEach((int physicalPin) {
+    inputs[physicalPin] = gpio.input(physicalPin);
+  });
 
-  for (int pinNum = 0; pinNum < 8; ++pinNum) {
-    var p = pin(pinNum, Mode.input);
-    print('${p.value} => ${p.description}');
-  }
+  inputs.forEach((int physicalPin, GpioInput input) {
+    print('pin $physicalPin = ${input.value}');
+  });
 }

@@ -21,42 +21,14 @@ set -e
 DARTSDK=$2
 
 cd $(dirname $0)
-echo building in `pwd`
-
-####################################################################
-# Build the wiring pi library... copied from wiringPi/build
-
-cd wiringPi
-hardware=`fgrep Hardware /proc/cpuinfo | head -1 | awk '{ print $3 }'`
-
-check_make_ok() {
-  if [ $? != 0 ]; then
-    echo ""
-    echo "Make Failed..."
-    echo "Please check the messages and fix any problems."
-    echo "If you're still stuck, then please open an issue at"
-    echo "https://github.com/danrubel/dart_rpi_gpio/issues"
-    echo "with all the output and as many details as you can"
-    exit 1
-  fi
-}
-
-echo building wiringPi
-make -j5
-check_make_ok
-echo installing wiringPi
-sudo make install
-check_make_ok
+echo building rpi_gpio in `pwd`
 
 ####################################################################
 # Build rpi_gpio native library
 
-echo building rpi_gpio
-cd $(dirname $0)
 g++ -fPIC -I$DARTSDK/ -c rpi_gpio_ext.cc
-LIBS=$(ls -dm wiringPi/*.o | tr -d ' ' | tr -d '\n')
 # use --no-undefined to check for missing libraries
-gcc -shared -lpthread -Wl,$LIBS,-soname,librpi_gpio_ext.so -o librpi_gpio_ext.so rpi_gpio_ext.o
+gcc -shared -lpthread -Wl,-soname,librpi_gpio_ext.so -o librpi_gpio_ext.so rpi_gpio_ext.o
 
 # Copy the library
 cp librpi_gpio_ext.so ../../librpi_gpio_ext.so

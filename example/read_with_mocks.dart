@@ -1,34 +1,53 @@
-import 'package:rpi_gpio/gpio.dart';
-import 'package:rpi_gpio/gpio_pins.dart';
-import 'package:rpi_gpio/rpi_gpio.dart' show isRaspberryPi, RpiGPIO;
-import 'package:rpi_gpio/wiringpi_gpio.dart' deferred as rpi;
+import 'dart:async';
 
-/// Read current values for pins 0 - 7
+import 'package:rpi_gpio/gpio.dart';
+
+/// To test your application, have your test method pass in an instance
+/// of your own [MockGpio] that extends [Gpio].
 main() async {
-  if (isRaspberryPi) {
-    // Initialize the underlying GPIO API library
-    await rpi.loadLibrary();
-    Pin.gpio = new rpi.WiringPiGPIO();
-  } else {
-    // Mock the GPIO library when testing
-    print('>>> initializing mock GPIO');
-    Pin.gpio = new MockGPIO();
+  runApp(new MockGpio());
+}
+
+void runApp(Gpio gpio) {
+  final inputs = <int, GpioInput>{};
+
+  const [3, 5, 7, 11, 12, 13].forEach((int physicalPin) {
+    inputs[physicalPin] = gpio.input(physicalPin);
+  });
+
+  inputs.forEach((int physicalPin, GpioInput input) {
+    print('pin $physicalPin = ${input.value}');
+  });
+}
+
+class MockGpio extends Gpio {
+  @override
+  GpioInput input(int physicalPin, [Pull pull = Pull.off]) {
+    allocatePin(physicalPin);
+    return new MockGpioInput(physicalPin.isEven);
   }
 
-  for (int pinNum = 0; pinNum < 8; ++pinNum) {
-    var p = pin(pinNum, Mode.input);
-    print('${p.value} => ${p.description}');
+  @override
+  GpioOutput output(int physicalPin) {
+    throw 'not implemented';
+  }
+
+  @override
+  set pollingFrequency(Duration frequency) {
+    throw 'not implemented';
+  }
+
+  @override
+  GpioPwmOutput pwmOutput(int physicalPin) {
+    throw 'not implemented';
   }
 }
 
-/// Simulate GPIO API when testing.
-class MockGPIO implements RpiGPIO {
-  /// Simulate all pins return value of 1 (high).
-  @override
-  bool getPin(int pin) => true;
+class MockGpioInput implements GpioInput {
+  bool value;
+
+  MockGpioInput(this.value);
 
   @override
-  void setMode(int pin, Mode mode) {}
-
-  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  Stream<bool> get values => throw 'not implemented';
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+ * BREAKING CHANGES rework and simplify API
+ * Upgrade for pre-2.0 and fix analyzer issues
+ * Format dart code using dartfmt
+
 ## 0.3.0
  * BREAKING CHANGES so that the rpi_gpio package much more closely matches
     [fletch gpio package](https://github.com/dart-lang/fletch/blob/master/pkg/gpio/lib/gpio.dart)

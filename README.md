@@ -8,17 +8,15 @@ rpi_gpio is a Dart package for accessing the Raspberry Pi GPIO pins.
 
 ## Overview
 
- * The [__gpio_pins__](lib/gpio_pins.dart) library provides __Pin__ objects
+ * The [__Gpio__](lib/gpio.dart) library provides the API
    for accessing the various General Purpose I/O pins on the Raspberry Pi.
 
- * [__WiringPiGPIO__](lib/wiringpi_gpio.dart) provides a low level API
-   for accessing the GPIO pins on the Raspberry Pi
-   using the [WiringPi](http://wiringpi.com/) library.
+ * [__RpiGpio__](lib/rpi_gpio.dart) provides the implementation
+   for the __Gpio__ API derived from the [WiringPi](http://wiringpi.com/) library.
 
 ## Setup
 
-[__WiringPiGPIO__](lib/wiringpi_gpio.dart) accesses the GPIO pins using a native library written
-in C and built on top of the [wiringPi](http://wiringpi.com/) library.
+[__RpiGpio__](lib/rpi_gpio.dart) accesses the GPIO pins using a native library written in C.
 For security reasons, authors cannot publish binary content
 to [pub.dartlang.org](https://pub.dartlang.org/), so there are some extra
 steps necessary to compile the native library on the RPi before this package
@@ -47,21 +45,15 @@ to compile the native librpi_gpio_ext.so library for the rpi_gpio package.
 
 ## Examples
 
- * A [read pins](example/read.dart) example demonstrates reading
-   the current value for multiple pins
-   using the high level [__gpio_pins__](lib/gpio_pins.dart) library.
+ * A [blinking LED](example/blink.dart) example demonstrates GPIO output
+   by flashing an LED.
 
- * A second [read pins](example/read_with_mocks.dart) example
+ * A [read](example/read.dart) example demonstrates GPIO input
+   by reading the current value for multiple pins.
+
+ * A second [read](example/read_with_mocks.dart) example
    demonstrates mocking the hardware so that the logic can be run and tested
    on platforms other than the Raspberry Pi.
 
- * A [blinking LED](example/blink.dart) example
-   and a [motor driver](example/pwm_motor_sample.dart) example
-   demonstrate using the high level [__gpio_pins__](lib/gpio_pins.dart) library.
-
- * A second [blinking LED](example/blink_hardware_api.dart)
-   demonstrates using the low level [__WiringPiGPIO__](lib/wiringpi_gpio.dart) API.
-
- * The value of GPIO pins can be tracked over time
-   via [interrupts](example/interrupts.dart)
-   or [polling](example/polling.dart).
+ * A [button](example/button.dart) example demonstrates reacting to GPIO input
+   by turning on an LED whenever a button is pressed.

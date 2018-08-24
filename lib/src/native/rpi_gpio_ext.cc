@@ -1,12 +1,22 @@
 #include <errno.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
+
 #include "include/dart_api.h"
 #include "include/dart_native_api.h"
-#include "wiringPi/wiringPi.h"
+
+static volatile uint32_t *gpio;
+static volatile uint32_t *pwm;
+static volatile uint32_t *clk;
 
 Dart_Handle HandleError(Dart_Handle handle) {
   if (Dart_IsError(handle)) {
@@ -15,376 +25,374 @@ Dart_Handle HandleError(Dart_Handle handle) {
   return handle;
 }
 
-// ===== gpio.c ===============================================================
-// The wiringPiISR method calls the global gpio method to configure interrupts.
-// Rather than requiring the user to separately install the gpio utility,
-// the interrupt configuration methods in gpio.c are copied here and called
-// directly.
+// === from wiringPi.c ===
 
-// New const for turning off interrupts
-#define	INT_EDGE_NONE  -1
+// To prevent accidental writes to critical control registers,
+// values written must be ORed with 0x5A000000.
+// - clock management
+// - power managements
+// - reset/watchdog control
 
-/*
- * changeOwner:
- *  >>> copied and modified from the wiringPi gpio global utility <<<
- *  Change the ownership of the file to the real userId of the calling
- *  program so we can access it.
- *********************************************************************************
- */
+#define BCM_PASSWORD  0x5A000000
 
-static void changeOwner (char *file)
-{
-  uid_t uid = getuid () ;
-  uid_t gid = getgid () ;
-
-  if (chown (file, uid, gid) != 0)
-  {
-    if (errno == ENOENT)  // Warn that it's not there
-    {
-      //fprintf (stderr, "%s: Warning: File not present: %s\n", cmd, file) ;
-    }
-    else
-    {
-      //fprintf (stderr, "%s: Unable to change ownership of %s: %s\n", cmd, file, strerror (errno)) ;
-      //exit (1) ;
-      HandleError(Dart_NewApiError("Unable to change file ownership"));
-    }
-  }
-}
-
-/*
- * doEdge:
- *  >>> copied and modified from the wiringPi gpio global utility <<<
- *  Easy access to changing the edge trigger on a GPIO pin
- *  This uses the /sys/class/gpio device interface.
- *********************************************************************************
- */
-
-void doEdge (int gpio_pin_num, int edge)
-{
-  FILE *fd ;
-  char fName [128] ;
-
-  // Export the GPIO pin via the special "export" file
-  // See https://www.kernel.org/doc/Documentation/gpio/sysfs.txt
-
-  if ((fd = fopen ("/sys/class/gpio/export", "w")) == NULL)
-  {
-    //fprintf (stderr, "%s: Unable to open GPIO export interface: %s\n", argv [0], strerror (errno)) ;
-    //exit (1) ;
-    HandleError(Dart_NewApiError("Unable to open GPIO export interface"));
-  }
-
-  fprintf (fd, "%d\n", gpio_pin_num) ;
-  fclose (fd) ;
-
-  // Set the direction of the GPIO pin to input via the special "direction" file
-  // See https://www.kernel.org/doc/Documentation/gpio/sysfs.txt
-
-  sprintf (fName, "/sys/class/gpio/gpio%d/direction", gpio_pin_num) ;
-  if ((fd = fopen (fName, "w")) == NULL)
-  {
-    //fprintf (stderr, "%s: Unable to open GPIO direction interface for pin %d: %s\n", argv [0], pin, strerror (errno)) ;
-    //exit (1) ;
-    HandleError(Dart_NewApiError("Unable to open GPIO direction interface"));
-  }
-
-  fprintf (fd, "in\n") ;
-  fclose (fd) ;
-
-  // Set the interrupt state of the GPIO pin via the special "edge" file
-  // See https://www.kernel.org/doc/Documentation/gpio/sysfs.txt
-
-  sprintf (fName, "/sys/class/gpio/gpio%d/edge", gpio_pin_num) ;
-  if ((fd = fopen (fName, "w")) == NULL)
-  {
-    //fprintf (stderr, "%s: Unable to open GPIO edge interface for pin %d: %s\n", argv [0], pin, strerror (errno)) ;
-    //exit (1) ;
-    HandleError(Dart_NewApiError("Unable to open GPIO edge interface"));
-  }
-
-  /**/ if (edge == INT_EDGE_NONE)    fprintf (fd, "none\n") ;
-  else if (edge == INT_EDGE_RISING)  fprintf (fd, "rising\n") ;
-  else if (edge == INT_EDGE_FALLING) fprintf (fd, "falling\n") ;
-  else if (edge == INT_EDGE_BOTH)    fprintf (fd, "both\n") ;
-  else
-  {
-    //fprintf (stderr, "%s: Invalid mode: %s. Should be none, rising, falling or both\n", argv [1], mode) ;
-    //exit (1) ;
-    fclose (fd) ;
-    HandleError(Dart_NewApiError("Invalid edge mode specified"));
-  }
-
-  // Change ownership of the value and edge files, so the current user can actually use it!
-
-  sprintf (fName, "/sys/class/gpio/gpio%d/value", gpio_pin_num) ;
-  changeOwner (fName) ;
-
-  sprintf (fName, "/sys/class/gpio/gpio%d/edge", gpio_pin_num) ;
-  changeOwner (fName) ;
-
-  fclose (fd) ;
-}
-
-// Native library connecting rpi_gpio.dart to the wiringPi library
-// See http://wiringpi.com/
-// and http://wiringpi.com/reference/core-functions/
+// The BCM2835 has 54 GPIO pins.
+// BCM2835 data sheet, Page 90 onwards.
+// There are 6 control registers, each control the functions of a block
+// of 10 pins.
+// Each control register has 10 sets of 3 bits per GPIO pin - the ALT values
 //
-// This code is heavily based on the article
-// Native Extensions for the Standalone Dart VM
-// https://www.dartlang.org/articles/native-extensions-for-standalone-dart-vm/#appendix-compiling-and-linking-extensions
-// and the example code
-// http://dart.googlecode.com/svn/trunk/dart/samples/sample_extension/
+// 000 = GPIO Pin X is an input
+// 001 = GPIO Pin X is an output
+// 100 = GPIO Pin X takes alternate function 0
+// 101 = GPIO Pin X takes alternate function 1
+// 110 = GPIO Pin X takes alternate function 2
+// 111 = GPIO Pin X takes alternate function 3
+// 011 = GPIO Pin X takes alternate function 4
+// 010 = GPIO Pin X takes alternate function 5
+//
+// So the 3 bits for port X are:
+// X / 10 + ((X % 10) * 3)
 
-// ===== Native methods ===============================================
-// Each native method must have an entry in either function_list or no_scope_function_list
+// Port function select bits
 
-// Initialize the native library.
-// This is called once by the rpi_gpio_ext_Init method in the Infrastructure section below.
-Dart_Handle rpi_gpio_wiringPi_init() {
-  int result = wiringPiSetup();
-  if (result != 0) {
-    // Apparently wiringPiSetup never returns if there is an initialization problem
-    return Dart_NewApiError("wiringPiSetup failed");
-  }
-  return Dart_Null();
-}
+#define FSEL_INPT       0b000   // Input
+#define FSEL_OUTP       0b001   // Output
+#define FSEL_ALT0       0b100   // Pulse Width Modulation
+#define FSEL_ALT1       0b101
+#define FSEL_ALT2       0b110
+#define FSEL_ALT3       0b111
+#define FSEL_ALT4       0b011
+#define FSEL_ALT5       0b010   // Pulse Width Modulation
 
-// Read the input voltage on a GPIO pin and return either high (1) or low (0).
-// int _digitalRead(int pin) native "digitalRead";
-void digitalRead(Dart_NativeArguments arguments) {
-  Dart_EnterScope();
-  Dart_Handle pin_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
-  int64_t pin_num;
-  HandleError(Dart_IntegerToInt64(pin_obj, &pin_num));
-  int value = digitalRead(pin_num);
-  Dart_Handle result = HandleError(Dart_NewInteger(value));
-  Dart_SetReturnValue(arguments, result);
-  Dart_ExitScope();
-}
+// PWM
+//        Word offsets into the PWM control region
 
-// Set the output voltage on a GPIO pin either high (1) or low (0).
-// void _digitalWrite(int pin, int value) native "digitalWrite";
-void digitalWrite(Dart_NativeArguments arguments) {
-  Dart_EnterScope();
-  Dart_Handle pin_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
-  Dart_Handle value_obj = HandleError(Dart_GetNativeArgument(arguments, 2));
-  int64_t pin_num, value;
-  HandleError(Dart_IntegerToInt64(pin_obj, &pin_num));
-  HandleError(Dart_IntegerToInt64(value_obj, &value));
-  digitalWrite(pin_num, value);
-  Dart_ExitScope();
-}
+#define PWM_CONTROL 0
+#define PWM_STATUS  1
+#define PWM0_RANGE  4
+#define PWM0_DATA   5
+#define PWM1_RANGE  8
+#define PWM1_DATA   9
 
-// Set the state of a pin to accept an input voltage or produce an output voltage
-// void _pinMode(int pin, int mode) native "pinMode";
-void pinMode(Dart_NativeArguments arguments) {
-  Dart_EnterScope();
-  Dart_Handle pin_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
-  Dart_Handle mode_obj = HandleError(Dart_GetNativeArgument(arguments, 2));
-  int64_t pin_num, mode;
-  HandleError(Dart_IntegerToInt64(pin_obj, &pin_num));
-  HandleError(Dart_IntegerToInt64(mode_obj, &mode));
-  pinMode(pin_num, mode);
-  Dart_ExitScope();
-}
+//        Clock regsiter offsets
 
-// Return the GPIO pin number for the given physical pin number
-// int _physPinToGpio(int pinNum) native "physPinToGpio";
-void physPinToGpio(Dart_NativeArguments arguments) {
-  Dart_EnterScope();
-  Dart_Handle pin_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
-  int64_t pin_num;
-  HandleError(Dart_IntegerToInt64(pin_obj, &pin_num));
-  int value = physPinToGpio(pin_num);
-  Dart_Handle result = HandleError(Dart_NewInteger(value));
-  Dart_SetReturnValue(arguments, result);
-  Dart_ExitScope();
-}
+#define PWMCLK_CNTL     40
+#define PWMCLK_DIV      41
 
-// Sets the pull-up or pull-down resistor mode on the given pin, where
-// pull 0 = off
-// pull 1 = pull down
-// pull 2 = pull up
-// The internal pull up/down resistors have a value of approximately 50KΩ on the Raspberry Pi.
-// The given pin should be already set as an input.
-// void _setPull(int pinNum, int pull) native "setPull";
-void setPull(Dart_NativeArguments arguments) {
-  Dart_EnterScope();
-  Dart_Handle pin_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
-  Dart_Handle pud_obj = HandleError(Dart_GetNativeArgument(arguments, 2));
-  int64_t pin_num, pud;
-  HandleError(Dart_IntegerToInt64(pin_obj, &pin_num));
-  HandleError(Dart_IntegerToInt64(pud_obj, &pud));
-  // pull 0, 1, 2 = PUD_OFF, PUD_DOWN, PUD_UP
-  pullUpDnControl(pin_num, pud);
-  Dart_ExitScope();
-}
+#define PWM_MODE_MS     0
+#define PWM_MODE_BAL    1
 
-// Writes the value to the PWM register for the given pin.
-// The Raspberry Pi has one on-board PWM pin, pin 1 (BMC_GPIO 18, Phys 12),
-// and the range is 0-1024.
-// void setPulseWidth(int pinNum, int pulseWidth) native "setPulseWidth";
-void setPulseWidth(Dart_NativeArguments arguments) {
-  Dart_EnterScope();
-  Dart_Handle pin_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
-  Dart_Handle pulseWidth_obj = HandleError(Dart_GetNativeArgument(arguments, 2));
-  int64_t pin_num, pulseWidth;
-  HandleError(Dart_IntegerToInt64(pin_obj, &pin_num));
-  HandleError(Dart_IntegerToInt64(pulseWidth_obj, &pulseWidth));
-  pwmWrite(pin_num, pulseWidth);
-  Dart_ExitScope();
-}
+#define PWM0_MS_MODE    0x0080  // Run in MS mode
+#define PWM0_USEFIFO    0x0020  // Data from FIFO
+#define PWM0_REVPOLAR   0x0010  // Reverse polarity
+#define PWM0_OFFSTATE   0x0008  // Ouput Off state
+#define PWM0_REPEATFF   0x0004  // Repeat last value if FIFO empty
+#define PWM0_SERIAL     0x0002  // Run in serial mode
+#define PWM0_ENABLE     0x0001  // Channel Enable
 
-// Return the GPIO number for the given wiringPi pin number
-void wpiPinToGpio(Dart_NativeArguments arguments) {
-  Dart_EnterScope();
-  Dart_Handle pin_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
-  int64_t pin_num;
-  HandleError(Dart_IntegerToInt64(pin_obj, &pin_num));
-  int gpioNum = wpiPinToGpio(pin_num);
-  Dart_Handle result = HandleError(Dart_NewInteger(gpioNum));
-  Dart_SetReturnValue(arguments, result);
-}
+#define PWM1_MS_MODE    0x8000  // Run in MS mode
+#define PWM1_USEFIFO    0x2000  // Data from FIFO
+#define PWM1_REVPOLAR   0x1000  // Reverse polarity
+#define PWM1_OFFSTATE   0x0800  // Ouput Off state
+#define PWM1_REPEATFF   0x0400  // Repeat last value if FIFO empty
+#define PWM1_SERIAL     0x0200  // Run in serial mode
+#define PWM1_ENABLE     0x0100  // Channel Enable
 
-// ===== Interrupts ===============================================
+// gpioToPwmALT
+//        the ALT value to put a GPIO pin into PWM mode
 
-// Main interrupt handler
-void gpioInterrupt(int pin);
-
-// The port to which interrupt events are posted
-// or null if initInterrupts has not yet been called.
-static Dart_Port interruptEventPort = -1;
-
-// The maximum number of active interrupts
-static const int interruptToPinMax = 10;
-
-// A map of interrupt # to pin #
-// A value of -1 indicates an unused interrupt #
-static int interruptToPin[interruptToPinMax];
-
-// Interrupt handlers 0 through interruptToPinMax - 1
-void gpioInterrupt0 (void) { gpioInterrupt(interruptToPin[0]); }
-void gpioInterrupt1 (void) { gpioInterrupt(interruptToPin[1]); }
-void gpioInterrupt2 (void) { gpioInterrupt(interruptToPin[2]); }
-void gpioInterrupt3 (void) { gpioInterrupt(interruptToPin[3]); }
-void gpioInterrupt4 (void) { gpioInterrupt(interruptToPin[4]); }
-void gpioInterrupt5 (void) { gpioInterrupt(interruptToPin[5]); }
-void gpioInterrupt6 (void) { gpioInterrupt(interruptToPin[6]); }
-void gpioInterrupt7 (void) { gpioInterrupt(interruptToPin[7]); }
-void gpioInterrupt8 (void) { gpioInterrupt(interruptToPin[8]); }
-void gpioInterrupt9 (void) { gpioInterrupt(interruptToPin[9]); }
-
-void (*gpioInterruptMap[interruptToPinMax])() = {
-  gpioInterrupt0,
-  gpioInterrupt1,
-  gpioInterrupt2,
-  gpioInterrupt3,
-  gpioInterrupt4,
-  gpioInterrupt5,
-  gpioInterrupt6,
-  gpioInterrupt7,
-  gpioInterrupt8,
-  gpioInterrupt9,
+static uint8_t gpioToPwmALT [] =
+{
+          0,         0,         0,         0,         0,         0,         0,         0,        //  0 ->  7
+          0,         0,         0,         0, FSEL_ALT0, FSEL_ALT0,         0,         0,        //  8 -> 15
+          0,         0, FSEL_ALT5, FSEL_ALT5,         0,         0,         0,         0,        // 16 -> 23
+          0,         0,         0,         0,         0,         0,         0,         0,        // 24 -> 31
+          0,         0,         0,         0,         0,         0,         0,         0,        // 32 -> 39
+  FSEL_ALT0, FSEL_ALT0,         0,         0,         0, FSEL_ALT0,         0,         0,        // 40 -> 47
+          0,         0,         0,         0,         0,         0,         0,         0,        // 48 -> 55
+          0,         0,         0,         0,         0,         0,         0,         0,        // 56 -> 63
 };
 
-// Main interrupt handler
-void gpioInterrupt(int pin_num) {
-  if (interruptEventPort != -1 && pin_num != -1) {
-    int value = digitalRead(pin_num);
-    Dart_CObject message;
-    message.type = Dart_CObject_kInt32;
-    message.value.as_int32 = pin_num | (value != 0 ? 0x80 : 0);
-    Dart_PostCObject(interruptEventPort, &message);
+// gpioToPwmPort
+//        The port value to put a GPIO pin into PWM mode
+
+static uint8_t gpioToPwmPort [] =
+{
+          0,         0,         0,         0,         0,         0,         0,         0,        //  0 ->  7
+          0,         0,         0,         0, PWM0_DATA, PWM1_DATA,         0,         0,        //  8 -> 15
+          0,         0, PWM0_DATA, PWM1_DATA,         0,         0,         0,         0,        // 16 -> 23
+          0,         0,         0,         0,         0,         0,         0,         0,        // 24 -> 31
+          0,         0,         0,         0,         0,         0,         0,         0,        // 32 -> 39
+  PWM0_DATA, PWM1_DATA,         0,         0,         0, PWM1_DATA,         0,         0,        // 40 -> 47
+          0,         0,         0,         0,         0,         0,         0,         0,        // 48 -> 55
+          0,         0,         0,         0,         0,         0,         0,         0,        // 56 -> 63
+
+};
+
+// Apparently a single call on the Pi to nanosleep takes some 80 to 130 microseconds
+// and we need 5 microseconds, so delay in a hard loop, watching gettimeofday() instead.
+void delayMicrosecondsHard(unsigned int howLong)
+{
+  struct timeval tNow, tLong, tEnd;
+
+  gettimeofday (&tNow, NULL);
+  tLong.tv_sec  = howLong / 1000000;
+  tLong.tv_usec = howLong % 1000000;
+  timeradd (&tNow, &tLong, &tEnd);
+
+  while (timercmp (&tNow, &tEnd, <))
+    gettimeofday (&tNow, NULL);
+}
+
+void delayMicroseconds(unsigned int howLong)
+{
+  struct timespec sleeper;
+  unsigned int uSecs = howLong % 1000000;
+  unsigned int wSecs = howLong / 1000000;
+
+  if (howLong == 0)
+    return;
+  else if (howLong  < 100)
+    delayMicrosecondsHard(howLong);
+  else
+  {
+    sleeper.tv_sec  = wSecs;
+    sleeper.tv_nsec = (long)(uSecs * 1000L);
+    nanosleep(&sleeper, NULL);
   }
 }
 
-// Start the service that listens for interrupt configuration requests
-// and posts interrupt events to the given port.
-// \param SendPort the port to which interrupt events are posted
-void initInterrupts(Dart_NativeArguments arguments) {
+// === end from wiringPi.c ===
+
+// Setup GPIO mapped memory access and return zero if successful.
+// Negative return values indicate an error.
+// int _setupGpio() native "setupGpio";
+void setupGpio(Dart_NativeArguments arguments) {
   Dart_EnterScope();
-  if (interruptEventPort != -1) {
-    HandleError(Dart_NewApiError("interrupts already initialized"));
-  }
-  Dart_Handle port_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
-  HandleError(Dart_SendPortGetId(port_obj, &interruptEventPort));
-  Dart_ExitScope();
-}
 
-// Sets the interrupt trigger for [pinNum] to [trigger] where
-// trigger 0 = none
-// trigger 1 = rising
-// trigger 2 = falling
-// trigger 3 = both
-// int _setTrigger(int pinNum, int trigger) native "setTrigger";
-void setTrigger(Dart_NativeArguments arguments) {
-  Dart_EnterScope();
-  Dart_Handle pin_obj = HandleError(Dart_GetNativeArgument(arguments, 1));
-  Dart_Handle trigger_obj = HandleError(Dart_GetNativeArgument(arguments, 2));
-  int64_t pin_num, trigger_num;
-  HandleError(Dart_IntegerToInt64(pin_obj, &pin_num));
-  HandleError(Dart_IntegerToInt64(trigger_obj, &trigger_num));
-  // Map trigger_num to edge
-  int edge = INT_EDGE_NONE;
-  /**/ if (trigger_num == 1) edge = INT_EDGE_RISING;
-  else if (trigger_num == 2) edge = INT_EDGE_FALLING;
-  else if (trigger_num == 3) edge = INT_EDGE_BOTH;
-  // Determine if this interrupt is already enabled
-  int interruptNum = -1;
-  for (int i = 0; i < interruptToPinMax; ++i) {
-    if (interruptToPin[i] == pin_num) {
-      interruptNum = i;
-      if (edge == INT_EDGE_NONE) {
-        // Disable an existing interrupt trigger
-        interruptToPin[i] = -1;
-        int gpio_pin_num = wpiPinToGpio(pin_num);
-        doEdge(gpio_pin_num, INT_EDGE_NONE);
-        interruptNum = -1;
-      }
-      break;
-    }
-  }
-  // If not already enabled then find an unused interrupt
-  if (interruptNum == -1 && edge != INT_EDGE_NONE) {
-    for (int i = 0; i < interruptToPinMax; ++i) {
-      if (interruptToPin[i] == -1) {
-        interruptToPin[i] = pin_num;
-        interruptNum = i;
-        break;
-      }
-    }
-    if (interruptNum != -1) {
-      if (interruptEventPort == -1) {
-        HandleError(Dart_NewApiError("must call initInterrupts first"));
-      }
-      // This is the method we would call,
-      // but calling wiringPiISR with any value other than INT_EDGE_SETUP
-      // requires the global gpio utility to be installed.
-      //wiringPiISR(pin_num, edge, gpioInterruptMap[interruptNum]);
+  int64_t result = 0;
+  int fd = open("/dev/gpiomem", O_RDWR | O_SYNC | O_CLOEXEC);
+  if (fd < 0) {
+    result = -1;
+  } else {
 
-      // Instead, call doEdge which is inlined from the gpio.c
-      // global utility which is part of the wiringPi library,
-      // and then call wiringPiISR with INT_EDGE_SETUP
-      int gpio_pin_num = wpiPinToGpio(pin_num);
-      doEdge(gpio_pin_num, edge);
-      wiringPiISR(pin_num, INT_EDGE_SETUP, gpioInterruptMap[interruptNum]);
+    void *gpio_map = mmap(
+      0,                      // Any adddress in our space will do
+      4096,                   // Map length
+      PROT_READ | PROT_WRITE, // Enable reading & writting to mapped memory
+      MAP_SHARED,             // Shared with other processes
+      fd,                     // File to map
+      0x3F200000              // Offset to GPIO peripheral
+    );
 
+    void *pwm_map = mmap(
+      0,                      // Any adddress in our space will do
+      4096,                   // Map length
+      PROT_READ | PROT_WRITE, // Enable reading & writting to mapped memory
+      MAP_SHARED,             // Shared with other processes
+      fd,                     // File to map
+      0x3F20C000              // Offset to pulse width modulation control
+    );
+
+    void *clk_map = mmap(
+      0,                      // Any adddress in our space will do
+      4096,                   // Map length
+      PROT_READ | PROT_WRITE, // Enable reading & writting to mapped memory
+      MAP_SHARED,             // Shared with other processes
+      fd,                     // File to map
+      0x3F101000              // Offset to clock control
+    );
+
+    close(fd);
+    if (gpio_map == MAP_FAILED) {
+      result = -2;
+    } else if (pwm_map == MAP_FAILED) {
+      result = -3;
+    } else if (clk_map == MAP_FAILED) {
+      result = -4;
     } else {
-      // If no unused interrupt slots, throw exception
-      HandleError(Dart_NewApiError("too many active interrupts"));
+      gpio = (volatile uint32_t *) gpio_map;
+      pwm  = (volatile uint32_t *) pwm_map;
+      clk  = (volatile uint32_t *) clk_map;
     }
   }
-  Dart_Handle result = HandleError(Dart_NewInteger(interruptNum));
-  Dart_SetReturnValue(arguments, result);
+
+  Dart_SetIntegerReturnValue(arguments, result);
   Dart_ExitScope();
 }
 
-// Stop the service that forwards interrupts.
-void disableAllInterrupts(Dart_NativeArguments arguments) {
+// Set the GPIO pin mode, where
+//   FSEL_INPT   = input
+//   FSEL_OUTP   = output
+//   FSEL_ALT0   = pulse width modulation (software based?)
+//   FSEL_ALT5   = pulse width modulation (hardware based?)
+void setGpioMode(int bcmGpioPin, int mode) {
+  int offset = bcmGpioPin / 10;
+  int shift = (bcmGpioPin % 10) * 3;
+  *(gpio + offset) = (*(gpio + offset) & ~(7 << shift)) | ((mode & 0x7) << shift);
+}
+
+void pwmSetClock(int divisor) {
+  divisor &= 4095;
+  uint32_t pwm_control = *(pwm + PWM_CONTROL);  // preserve PWM_CONTROL
+
+  // Stop PWM prior to stopping PWM clock in MS mode otherwise BUSY stays high.
+
+  *(pwm + PWM_CONTROL) = 0;                     // Stop PWM
+
+  // Stop PWM clock before changing divisor. The delay after this does need to
+  // this big (95uS occasionally fails, 100uS OK), it's almost as though the BUSY
+  // flag is not working properly in balanced mode. Without the delay when DIV is
+  // adjusted the clock sometimes switches to very slow, once slow further DIV
+  // adjustments do nothing and it's difficult to get out of this mode.
+
+  *(clk + PWMCLK_CNTL) = BCM_PASSWORD | 0x01;   // Stop PWM Clock
+  delayMicroseconds (110);   // prevents clock going sloooow
+
+  while ((*(clk + PWMCLK_CNTL) & 0x80) != 0)    // Wait for clock to be !BUSY
+    delayMicroseconds (1);
+
+  *(clk + PWMCLK_DIV)  = BCM_PASSWORD | (divisor << 12);
+
+  *(clk + PWMCLK_CNTL) = BCM_PASSWORD | 0x11;   // Start PWM clock
+  *(pwm + PWM_CONTROL) = pwm_control;           // restore PWM_CONTROL
+}
+
+void pwmSetMode(int mode) {
+  if (mode == PWM_MODE_MS)
+    *(pwm + PWM_CONTROL) = PWM0_ENABLE | PWM1_ENABLE | PWM0_MS_MODE | PWM1_MS_MODE;
+  else
+    *(pwm + PWM_CONTROL) = PWM0_ENABLE | PWM1_ENABLE;
+}
+
+void pwmSetRange(unsigned int range) {
+  *(pwm + PWM0_RANGE) = range; delayMicroseconds (10);
+  *(pwm + PWM1_RANGE) = range; delayMicroseconds (10);
+}
+
+// Initialize a GPIO pin for input where pullUpDown is
+//   0 = off
+//   1 = pull down (low)
+//   2 = pull up (high)
+// void _setGpioInput(int bcmGpioPin, int pullUpDown) native "setGpioInput";
+void setGpioInput(Dart_NativeArguments arguments) {
   Dart_EnterScope();
-  interruptEventPort = -1;
-  // TODO turn off interrupts at the hardware level
+  Dart_Handle arg1 = HandleError(Dart_GetNativeArgument(arguments, 1));
+  Dart_Handle arg2 = HandleError(Dart_GetNativeArgument(arguments, 2));
+
+  int64_t bcmGpioPin;
+  int64_t pullUpDown;
+  HandleError(Dart_IntegerToInt64(arg1, &bcmGpioPin));
+  HandleError(Dart_IntegerToInt64(arg2, &pullUpDown));
+
+  setGpioMode(bcmGpioPin, FSEL_INPT);
+
+  // 37 is GPIO up/down register, 38 and 39 are GPIO up/down set bits
+  *(gpio + 37) = pullUpDown & 3;                                   delayMicroseconds (5);
+  *(gpio + (bcmGpioPin < 32 ? 38 : 39)) = 1 << (bcmGpioPin & 31);  delayMicroseconds (5);
+
+  *(gpio + 37) = 0;                                                delayMicroseconds (5);
+  *(gpio + (bcmGpioPin < 32 ? 38 : 39)) = 0;                       delayMicroseconds (5);
+
+  Dart_ExitScope();
+}
+
+// Initialize a GPIO pin for output.
+// void _setGpioOutput(int bcmGpio) native "setGpioOutput";
+void setGpioOutput(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  Dart_Handle arg1 = HandleError(Dart_GetNativeArgument(arguments, 1));
+
+  int64_t bcmGpioPin;
+  HandleError(Dart_IntegerToInt64(arg1, &bcmGpioPin));
+
+  setGpioMode(bcmGpioPin, FSEL_OUTP);
+
+  Dart_ExitScope();
+}
+
+// Initialize a GPIO pin for pulse width modulated output.
+// void _setGpioPwmOutput(int bcmGpio) native "setGpioPwmOutput";
+void setGpioPwmOutput(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  Dart_Handle arg1 = HandleError(Dart_GetNativeArgument(arguments, 1));
+
+  int64_t bcmGpioPin;
+  HandleError(Dart_IntegerToInt64(arg1, &bcmGpioPin));
+
+  uint8_t pwmAlt = gpioToPwmALT[bcmGpioPin];
+  if (pwmAlt != 0) {
+    // From http://what-when-how.com/Tutorial/topic-535dm28c/Smart-Home-Automation-with-Linux-and-Raspberry-Pi-303.html
+
+    *(pwm + PWM_CONTROL) = 0;                             // off
+
+// ********************
+//  Uncommenting pwmSetRange causes the RPi to lockup or go very sloooooooooowly
+// ********************
+//    pwmSetRange(1024);                                   // Default range of 1024
+//    *(pwm + PWM0_RANGE) = 1024;
+
+    pwmSetClock(32);                                     // 19.2 / 32 = 600KHz - Also starts the PWM
+
+    setGpioMode(bcmGpioPin, pwmAlt);                     // turn on PWM for pin
+    delayMicroseconds(110);                              // See comments in pwmSetClock
+
+//    pwmSetMode(PWM_MODE_BAL);                             // Pi default mode
+    *(pwm + PWM_CONTROL) = PWM0_ENABLE;                  // Pi default mode
+//    *(pwm + PWM_CONTROL) = PWM0_ENABLE | PWM1_ENABLE;    // Pi default mode
+  }
+
+  Dart_ExitScope();
+}
+
+// Read the input voltage on a GPIO pin and return either true (high) or false (low).
+// bool _readGpio(int bcmGpioPin) native "readGpio";
+void readGpio(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  Dart_Handle arg1 = HandleError(Dart_GetNativeArgument(arguments, 1));
+
+  int64_t bcmGpioPin;
+  HandleError(Dart_IntegerToInt64(arg1, &bcmGpioPin));
+
+  // 13 and 14 are GPIO input bits
+  bool value = (*(gpio + (bcmGpioPin < 32 ? 13 : 14)) & (1 << (bcmGpioPin & 31))) != 0;
+
+  Dart_SetBooleanReturnValue(arguments, value);
+  Dart_ExitScope();
+}
+
+// Set the output voltage on a GPIO pin to high (true) or low (false).
+// void _writeGpio(int bcmGpioPin, bool newValue) native "writeGpio";
+void writeGpio(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  Dart_Handle arg1 = HandleError(Dart_GetNativeArgument(arguments, 1));
+  Dart_Handle arg2 = HandleError(Dart_GetNativeArgument(arguments, 2));
+
+  int64_t bcmGpioPin;
+  bool newValue;
+  HandleError(Dart_IntegerToInt64(arg1, &bcmGpioPin));
+  HandleError(Dart_BooleanValue(arg2, &newValue));
+
+  // 7 and 8 are set GPIO output HIGH bits, 10 and 11 are set GPIO output LOW bits.
+  *(gpio + (newValue ? 7 : 10) + (bcmGpioPin < 32 ? 0 : 1)) = 1 << (bcmGpioPin & 31);
+
+  Dart_ExitScope();
+}
+
+// Set the pulse width modulated output to a value between 0 (off) and 1024 (on).
+// void _writePwmGpio(int bcmGpio, int newValue) native "writePwmGpio";
+void writePwmGpio(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  Dart_Handle arg1 = HandleError(Dart_GetNativeArgument(arguments, 1));
+  Dart_Handle arg2 = HandleError(Dart_GetNativeArgument(arguments, 2));
+
+  int64_t bcmGpioPin;
+  int64_t newValue;
+  HandleError(Dart_IntegerToInt64(arg1, &bcmGpioPin));
+  HandleError(Dart_IntegerToInt64(arg2, &newValue));
+
+  *(pwm + gpioToPwmPort[bcmGpioPin]) = newValue;
+
   Dart_ExitScope();
 }
 
@@ -396,16 +404,13 @@ struct FunctionLookup {
 };
 
 FunctionLookup function_list[] = {
-  {"digitalRead", digitalRead},
-  {"digitalWrite", digitalWrite},
-  {"disableAllInterrupts", disableAllInterrupts},
-  {"initInterrupts", initInterrupts},
-  {"pinMode", pinMode},
-  {"physPinToGpio", physPinToGpio},
-  {"setPull", setPull},
-  {"setPulseWidth", setPulseWidth},
-  {"setTrigger", setTrigger},
-  {"wpiPinToGpio", wpiPinToGpio},
+  {"readGpio", readGpio},
+  {"setGpioInput", setGpioInput},
+  {"setGpioOutput", setGpioOutput},
+  {"setGpioPwmOutput", setGpioPwmOutput},
+  {"setupGpio", setupGpio},
+  {"writeGpio", writeGpio},
+  {"writePwmGpio", writePwmGpio},
   {NULL, NULL}
 };
 
@@ -467,12 +472,12 @@ DART_EXPORT Dart_Handle rpi_gpio_ext_Init(Dart_Handle parent_library) {
     return result_code;
   }
   // Initialize the interrupt forwarding table
-  for (int i = 0; i < interruptToPinMax; ++i) {
-    interruptToPin[i] = -1;
-  }
-  result_code = rpi_gpio_wiringPi_init();
-  if (Dart_IsError(result_code)) {
-    return result_code;
-  }
+  //for (int i = 0; i < interruptToPinMax; ++i) {
+  //  interruptToPin[i] = -1;
+  //}
+  //result_code = rpi_gpio_wiringPi_init();
+  //if (Dart_IsError(result_code)) {
+  //  return result_code;
+  //}
   return Dart_Null();
 }

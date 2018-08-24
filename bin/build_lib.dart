@@ -2,54 +2,52 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart';
-import 'package:rpi_gpio/rpi_gpio.dart';
 
 const rpiGpioPkgName = 'rpi_gpio';
-const buildScriptVersion = 1;
+const buildScriptVersion = 2;
 
 main(List<String> args) {
-
   // Locate the Dart SDK
   File dartVm = new File(Platform.executable);
-  if (!dartVm.isAbsolute) {
-    print('Dart VM... ${dartVm.path}');
-    String path = Process.runSync('which', ['dart']).stdout;
-    dartVm = new File(path.trim());
-  }
-  Directory dartSdk = dartVm.parent.parent;
-  File headerFile = new File(join(dartSdk.path, 'include', 'dart_api.h'));
-  if (!headerFile.existsSync()) {
-    print('Dart VM... ${dartVm.path}');
-    String path = Process.runSync('readlink', ['-f', dartVm.path]).stdout;
-    dartVm = new File(path.trim());
-    dartSdk = dartVm.parent.parent;
-    headerFile = new File(join(dartSdk.path, 'include', 'dart_api.h'));
-  }
   print('Dart VM... ${dartVm.path}');
+  if (!dartVm.isAbsolute) {
+    dartVm = new File.fromUri(Directory.current.uri.resolve(dartVm.path));
+    print('Dart VM... ${dartVm.path}');
+  }
+  abortIf(!dartVm.isAbsolute, 'Failed to find absolute path to Dart VM');
+
+  // Locate Dart SDK
+  final dartSdk = dartVm.parent.parent;
   print('Dart SDK... ${dartSdk.path}');
-  assertExists('include file', headerFile);
+
+  // Locate dart_api.h
+  final headerPath = 'include/dart_api.h';
+  final headerFile = new File.fromUri(dartSdk.uri.resolve(headerPath));
+  abortIf(!headerFile.existsSync(), 'Failed to find $headerPath');
 
   // Run pub list to determine the location of the GPIO package being used
-  var pubResult = JSON.decode(Process.runSync(
-      join(dartSdk.path, 'bin', 'pub'), ['list-package-dirs']).stdout);
+  final pub = new File.fromUri(dartSdk.uri.resolve('bin/pub'));
+  final pubOut = Process.runSync(pub.path, ['list-package-dirs']).stdout;
+  final pubResult = jsonDecode(pubOut);
   assertNoPubListError(pubResult);
-  var rpiGpioDir = new Directory(pubResult['packages'][rpiGpioPkgName]);
+  final rpiGpioDir = new Directory(pubResult['packages'][rpiGpioPkgName]);
   print('Building library in ${rpiGpioDir.path}');
 
   // Display the version of the rpi_gpio being built
-  var pubspecFile = new File(join(rpiGpioDir.path, '..', 'pubspec.yaml'));
-  assertExists('pubspec', pubspecFile);
-  var pubspec = pubspecFile.readAsStringSync();
+  final pubspecFile = new File(join(rpiGpioDir.path, '..', 'pubspec.yaml'));
+  abortIf(!pubspecFile.existsSync(), 'Failed to find ${pubspecFile.path}');
+  final pubspec = pubspecFile.readAsStringSync();
   print('rpi_gpio version ${parseVersion(pubspec)}');
 
   // Build the native library
-  var nativeDir = new Directory(join(rpiGpioDir.path, 'src', 'native'));
-  var buildScriptFile = new File(join(nativeDir.path, 'build_lib'));
+  final nativeDir = new Directory(join(rpiGpioDir.path, 'src', 'native'));
+  final buildScriptFile = new File(join(nativeDir.path, 'build_lib'));
   assertRunningOnRaspberryPi();
-  var buildResult = Process.runSync(
+  final buildResult = Process.runSync(
       buildScriptFile.path, [buildScriptVersion.toString(), dartSdk.path]);
   print(buildResult.stdout);
   print(buildResult.stderr);
+  if (buildResult.exitCode != 0) exit(buildResult.exitCode);
 }
 
 /// Parse the given content and return the version string
@@ -60,18 +58,19 @@ String parseVersion(String pubspec) {
   return pubspec.substring(start, end).trim();
 }
 
-/// Assert that the given file or directory exists.
-assertExists(String name, FileSystemEntity entity) {
-  if (entity.existsSync()) return;
-  print('Failed to find $name: ${entity.path}');
-  throw 'Aborting build';
+/// Abort if the specified condition is true.
+void abortIf(bool condition, String message) {
+  if (condition) {
+    print(message);
+    throw 'Aborting build';
+  }
 }
 
 /// Assert that the given pub list result does not indicate an error
-void assertNoPubListError(Map<String, String> pubResult) {
+void assertNoPubListError(Map<String, dynamic> pubResult) {
   var error = pubResult['error'];
   if (error == null) {
-    var packages = pubResult['packages'];
+    Map<String, dynamic> packages = pubResult['packages'];
     if (packages != null) {
       var rpiGpio = packages[rpiGpioPkgName];
       if (rpiGpio != null) {
@@ -91,13 +90,8 @@ void assertNoPubListError(Map<String, String> pubResult) {
 
 /// Assert that this script is executing on the Raspberry Pi.
 assertRunningOnRaspberryPi() {
-  if (!isRaspberryPi) {
-    if (Platform.isLinux) {
-      print('Marker file not found: ${raspberryPiMarkerFile.absolute.path}');
-      print('If this is running on a Raspberry Pi, please create this file');
-    } else {
-      print('Not running on Raspberry Pi... skipping build');
-    }
+  if (!new Directory('/home/pi').existsSync()) {
+    print('Not running on Raspberry Pi... skipping build');
     throw 'Aborting build';
   }
 }

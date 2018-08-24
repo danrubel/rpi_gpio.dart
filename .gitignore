@@ -1,10 +1,14 @@
 .atom
 .DS_Store
+.dart_tool
 .idea
 .packages
 .project
 .pub
 .settings
+*.iml
+*.o
+*.so
 packages
 pubspec.lock
 
