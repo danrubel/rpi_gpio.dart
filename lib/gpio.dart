@@ -5,7 +5,9 @@ import 'package:rpi_gpio/src/gpio_const.dart';
 /// Base GPIO interface supported by all GPIO implementations.
 abstract class Gpio {
   final _allocatedPins = <int>[];
-  final _allocatedPwmPorts = <int>[-1, -1];
+
+  /// Call dispose before exiting your application to cleanup native resources.
+  void dispose();
 
   /// Return a GPIO pin configured for input,
   /// where [physicalPin] is the physical pin number not the GPIO number.
@@ -14,10 +16,6 @@ abstract class Gpio {
   /// Return a GPIO pin configured for output,
   /// where [physicalPin] is the physical pin number not the GPIO number.
   GpioOutput output(int physicalPin);
-
-  /// Return a GPIO pin configured for pulse width modulation output,
-  /// where [physicalPin] is the physical pin number not the GPIO number.
-  GpioPwmOutput pwmOutput(int physicalPin);
 
   /// Set the polling frequency for any [GpioInput.values] streams.
   /// The default polling frequency is every 10 milliseconds.
@@ -34,28 +32,13 @@ abstract class Gpio {
       throw new GpioException('Invalid pin', physicalPin);
     }
     if (_allocatedPins.contains(physicalPin)) {
-      throw new GpioException('Already allocated', physicalPin);
+      throwPinAlreadyAllocated(physicalPin);
     }
     _allocatedPins.add(physicalPin);
   }
 
-  /// Check that the pin can be used for PWM output
-  /// and that is has not already been allocated.
-  /// This should be called by subclasses not clients.
-  void allocatePwmPin(int physicalPin) {
-    if (physicalPin < 0 || physicalPin >= physToPwmPort.length)
-      throw new GpioException('Invalid pin', physicalPin);
-
-    int pwmPort = physToPwmPort[physicalPin];
-    if (pwmPort == -1) throw new GpioException('Invalid PWM pin', physicalPin);
-    if (_allocatedPwmPorts[pwmPort] != -1)
-      throw new GpioException(
-          'PWM port $pwmPort already allocated'
-          ' to pin ${_allocatedPwmPorts[pwmPort]}',
-          physicalPin);
-
-    allocatePin(physicalPin);
-    _allocatedPwmPorts[pwmPort]=physicalPin;
+  void throwPinAlreadyAllocated(int physicalPin) {
+    throw new GpioException('Already allocated', physicalPin);
   }
 }
 
@@ -71,11 +54,6 @@ abstract class GpioInput {
 /// A GPIO output pin.
 abstract class GpioOutput {
   set value(bool newValue);
-}
-
-/// A GPIO output pin with pulse width modulation.
-abstract class GpioPwmOutput extends GpioOutput {
-  set pwmValue(int newValue);
 }
 
 /// A [GpioInput] can have an internal pull up or pull down resistor.

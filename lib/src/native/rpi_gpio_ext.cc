@@ -14,6 +14,7 @@
 #include "include/dart_api.h"
 #include "include/dart_native_api.h"
 
+#define BLOCK_SIZE 4096
 static volatile uint32_t *gpio;
 static volatile uint32_t *pwm;
 static volatile uint32_t *clk;
@@ -178,7 +179,7 @@ void setupGpio(Dart_NativeArguments arguments) {
 
     void *gpio_map = mmap(
       0,                      // Any adddress in our space will do
-      4096,                   // Map length
+      BLOCK_SIZE,             // Map length
       PROT_READ | PROT_WRITE, // Enable reading & writting to mapped memory
       MAP_SHARED,             // Shared with other processes
       fd,                     // File to map
@@ -187,7 +188,7 @@ void setupGpio(Dart_NativeArguments arguments) {
 
     void *pwm_map = mmap(
       0,                      // Any adddress in our space will do
-      4096,                   // Map length
+      BLOCK_SIZE,             // Map length
       PROT_READ | PROT_WRITE, // Enable reading & writting to mapped memory
       MAP_SHARED,             // Shared with other processes
       fd,                     // File to map
@@ -196,7 +197,7 @@ void setupGpio(Dart_NativeArguments arguments) {
 
     void *clk_map = mmap(
       0,                      // Any adddress in our space will do
-      4096,                   // Map length
+      BLOCK_SIZE,             // Map length
       PROT_READ | PROT_WRITE, // Enable reading & writting to mapped memory
       MAP_SHARED,             // Shared with other processes
       fd,                     // File to map
@@ -215,6 +216,29 @@ void setupGpio(Dart_NativeArguments arguments) {
       pwm  = (volatile uint32_t *) pwm_map;
       clk  = (volatile uint32_t *) clk_map;
     }
+  }
+
+  Dart_SetIntegerReturnValue(arguments, result);
+  Dart_ExitScope();
+}
+
+// Dispose of GPIO mapped memory access and return zero if successful.
+// Negative return values indicate an error.
+// int _disposeGpio() native "disposeGpio";
+void disposeGpio(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+
+  int gpio_result = munmap((void *) gpio, BLOCK_SIZE);
+  int pwm_result  = munmap((void *) pwm,  BLOCK_SIZE);
+  int clk_result  = munmap((void *) clk,  BLOCK_SIZE);
+
+  int64_t result = 0;
+  if (gpio_result == -1) {
+    result = -2;
+  } else if (pwm_result == -1) {
+    result = -3;
+  } else if (clk_result == -1) {
+    result = -4;
   }
 
   Dart_SetIntegerReturnValue(arguments, result);
@@ -404,6 +428,7 @@ struct FunctionLookup {
 };
 
 FunctionLookup function_list[] = {
+  {"disposeGpio", disposeGpio},
   {"readGpio", readGpio},
   {"setGpioInput", setGpioInput},
   {"setGpioOutput", setGpioOutput},
@@ -471,13 +496,5 @@ DART_EXPORT Dart_Handle rpi_gpio_ext_Init(Dart_Handle parent_library) {
   if (Dart_IsError(result_code)) {
     return result_code;
   }
-  // Initialize the interrupt forwarding table
-  //for (int i = 0; i < interruptToPinMax; ++i) {
-  //  interruptToPin[i] = -1;
-  //}
-  //result_code = rpi_gpio_wiringPi_init();
-  //if (Dart_IsError(result_code)) {
-  //  return result_code;
-  //}
   return Dart_Null();
 }

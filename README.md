@@ -2,7 +2,6 @@
 
 [![pub package](https://img.shields.io/pub/v/rpi_gpio.svg)](https://pub.dartlang.org/packages/rpi_gpio)
 [![Build Status](https://travis-ci.org/danrubel/rpi_gpio.dart.svg?branch=master)](https://travis-ci.org/danrubel/rpi_gpio.dart)
-[![Coverage Status](https://coveralls.io/repos/danrubel/rpi_gpio.dart/badge.svg?branch=master&service=github)](https://coveralls.io/github/danrubel/rpi_gpio.dart?branch=master)
 
 rpi_gpio is a Dart package for accessing the Raspberry Pi GPIO pins.
 
@@ -43,17 +42,15 @@ rpi_gpio:build_lib runs the [rpi_gpio/bin/build_lib.dart](bin/build_lib.dart)
 program which in turn calls the [build_lib](lib/src/native/build_lib) script
 to compile the native librpi_gpio_ext.so library for the rpi_gpio package.
 
-## Examples
+## Example
 
- * A [blinking LED](example/blink.dart) example demonstrates GPIO output
-   by flashing an LED.
+The [example](example/example.dart) launches the [example app](example/exampleApp.dart)
+to demonstrate:
 
- * A [read](example/read.dart) example demonstrates GPIO input
-   by reading the current value for multiple pins.
+ * Blinking an LED.
 
- * A second [read](example/read_with_mocks.dart) example
-   demonstrates mocking the hardware so that the logic can be run and tested
-   on platforms other than the Raspberry Pi.
+ * Responding to a button press by turning on an LED.
 
- * A [button](example/button.dart) example demonstrates reacting to GPIO input
-   by turning on an LED whenever a button is pressed.
+The example is structured such that the [example test](test/example_test.dart)
+can inject a mock gpio to facilitate testing and allow test execution on platforms
+other than the Raspberry Pi.

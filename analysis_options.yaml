@@ -1,0 +1,18 @@
+include: package:pedantic/analysis_options.yaml
+
+analyzer:
+  strong-mode:
+    implicit-casts: false
+  errors:
+    dead_code: error
+    unused_element: error
+    unused_import: error
+    unused_local_variable: error
+    todo: ignore
+
+linter:
+  rules:
+    - await_only_futures
+    - hash_and_equals
+    - implementation_imports
+    - prefer_typing_uninitialized_variables

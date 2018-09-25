@@ -5,7 +5,7 @@ import 'package:grinder/grinder.dart';
 
 import '../test/test_util.dart';
 
-main(args) => grind(args);
+main(List<String> args) => grind(args);
 
 @Task()
 void analyze() {

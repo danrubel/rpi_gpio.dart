@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:path/path.dart';
 
-const rpiGpioPkgName = 'rpi_gpio';
+const pkgName = 'rpi_gpio';
 const buildScriptVersion = 2;
 
 main(List<String> args) {
@@ -27,20 +27,21 @@ main(List<String> args) {
 
   // Run pub list to determine the location of the GPIO package being used
   final pub = new File.fromUri(dartSdk.uri.resolve('bin/pub'));
-  final pubOut = Process.runSync(pub.path, ['list-package-dirs']).stdout;
-  final pubResult = jsonDecode(pubOut);
+  String pubOut = Process.runSync(pub.path, ['list-package-dirs']).stdout;
+  Map<String, dynamic> pubResult = jsonDecode(pubOut);
   assertNoPubListError(pubResult);
-  final rpiGpioDir = new Directory(pubResult['packages'][rpiGpioPkgName]);
-  print('Building library in ${rpiGpioDir.path}');
+  String dirName = pubResult['packages'][pkgName];
+  final pkgDir = new Directory(dirName);
+  print('Building library in ${pkgDir.path}');
 
   // Display the version of the rpi_gpio being built
-  final pubspecFile = new File(join(rpiGpioDir.path, '..', 'pubspec.yaml'));
+  final pubspecFile = new File(join(pkgDir.path, '..', 'pubspec.yaml'));
   abortIf(!pubspecFile.existsSync(), 'Failed to find ${pubspecFile.path}');
   final pubspec = pubspecFile.readAsStringSync();
-  print('rpi_gpio version ${parseVersion(pubspec)}');
+  print('$pkgName version ${parseVersion(pubspec)}');
 
   // Build the native library
-  final nativeDir = new Directory(join(rpiGpioDir.path, 'src', 'native'));
+  final nativeDir = new Directory(join(pkgDir.path, 'src', 'native'));
   final buildScriptFile = new File(join(nativeDir.path, 'build_lib'));
   assertRunningOnRaspberryPi();
   final buildResult = Process.runSync(
@@ -72,12 +73,12 @@ void assertNoPubListError(Map<String, dynamic> pubResult) {
   if (error == null) {
     Map<String, dynamic> packages = pubResult['packages'];
     if (packages != null) {
-      var rpiGpio = packages[rpiGpioPkgName];
+      var rpiGpio = packages[pkgName];
       if (rpiGpio != null) {
         return;
       }
-      print('Cannot find $rpiGpioPkgName in pub list result');
-      print('Must run this script on app referencing $rpiGpioPkgName package');
+      print('Cannot find $pkgName in pub list result');
+      print('Must run this script on app referencing $pkgName package');
       throw 'Aborting build';
     }
     print('Cannot find packages in pub list result');

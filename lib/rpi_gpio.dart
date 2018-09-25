@@ -13,13 +13,53 @@ class RpiGpio extends Gpio {
   Duration _pollingFrequency = new Duration(milliseconds: 10);
   Timer _pollingTimer;
 
-  RpiGpio() {
+  /// Instantiate a new GPIO manager.
+  /// By default, you cannot allocate the I2C or SPI pins as GPIO pins.
+  /// If you want to use the I2C pins as GPIO pins, pass `i2c: false`.
+  /// If you want to use the SPI pins as GPIO pins, pass `spi: false`.
+  RpiGpio({bool i2c = true, bool spi = true, bool eeprom = true}) {
     if (_instantiatedGpio)
       throw new GpioException('RpiGpio already instantiated');
     _instantiatedGpio = true;
     int result = _setupGpio();
     if (result != 0)
       throw new GpioException('RpiGpio initialization failed: $result');
+    if (i2c) physI2CPins.forEach(allocatePin);
+    if (spi) physSpiPins.forEach(allocatePin);
+    if (eeprom) physEepromPins.forEach(allocatePin);
+  }
+
+  @override
+  void throwPinAlreadyAllocated(int physicalPin) {
+    if (physI2CPins.contains(physicalPin)) {
+      throw new GpioException(
+          'If you want to use I2C pins for GPIO,'
+          ' pass "i2c: false" into the RpiGpio constructor\n'
+          'Already allocated',
+          physicalPin);
+    }
+    if (physSpiPins.contains(physicalPin)) {
+      throw new GpioException(
+          'If you want to use SPI pins for GPIO,'
+          ' pass "spi: false" into the RpiGpio constructor\n'
+          'Already allocated',
+          physicalPin);
+    }
+    if (physEepromPins.contains(physicalPin)) {
+      throw new GpioException(
+          'If you want to use EEPROM pins for GPIO,'
+          ' pass "eeprom: false" into the RpiGpio constructor\n'
+          'Already allocated',
+          physicalPin);
+    }
+    super.throwPinAlreadyAllocated(physicalPin);
+  }
+
+  @override
+  void dispose() {
+    int result = _disposeGpio();
+    if (result != 0) throw new GpioException('RpiGpio dispose failed: $result');
+    _instantiatedGpio = false;
   }
 
   @override
@@ -41,12 +81,6 @@ class RpiGpio extends Gpio {
       _stopPollingTimer();
       _startPollingTimer();
     }
-  }
-
-  @override
-  GpioPwmOutput pwmOutput(int physicalPin) {
-    allocatePwmPin(physicalPin);
-    return new RpiGpioPwmOutput._(physicalPin);
   }
 
   void _startPolling(RpiGpioInput input) {
@@ -78,6 +112,7 @@ class RpiGpio extends Gpio {
   }
 
   int _setupGpio() native "setupGpio";
+  int _disposeGpio() native "disposeGpio";
 }
 
 class RpiGpioInput extends GpioInput {
@@ -118,7 +153,7 @@ class RpiGpioInput extends GpioInput {
     bool currentValue = value;
     if (_lastValue != currentValue) {
       _lastValue = currentValue;
-      _valuesController.add(currentValue);
+      _valuesController?.add(currentValue);
     }
   }
 
@@ -142,30 +177,4 @@ class RpiGpioOutput extends GpioOutput {
 
   void _setGpioOutput(int bcmGpio) native "setGpioOutput";
   void _writeGpio(int bcmGpioPin, bool newValue) native "writeGpio";
-}
-
-class RpiGpioPwmOutput extends GpioPwmOutput {
-  final int physicalPin;
-  final int bcmGpio;
-
-  RpiGpioPwmOutput._(this.physicalPin)
-      : bcmGpio = physToBcmGpioRPi2[physicalPin] {
-    _setGpioPwmOutput(bcmGpio);
-  }
-
-  @override
-  set pwmValue(int newValue) {
-    if (newValue == null || newValue < 0 || 1024 < newValue)
-      throw new GpioException('Invalid value $newValue', physicalPin);
-    _writePwmGpio(bcmGpio, newValue);
-  }
-
-  @override
-  set value(bool newValue) {
-    if (newValue == null) throw new GpioException('Invalid value', physicalPin);
-    _writePwmGpio(bcmGpio, newValue ? 1024 : 0);
-  }
-
-  void _setGpioPwmOutput(int bcmGpio) native "setGpioPwmOutput";
-  void _writePwmGpio(int bcmGpio, int newValue) native "writePwmGpio";
 }

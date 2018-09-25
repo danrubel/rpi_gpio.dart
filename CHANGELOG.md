@@ -1,6 +1,14 @@
 # Changelog
 
-## 0.4.0
+## 0.5.0
+ * BREAKING: automatically allocate I2C, SPI, and EEPROM pins
+     unless flag in RpiGpio constructor is set to false
+ * consolidate all examples into single example.dart with debouncer
+ * add example_test.dart with mock gpio
+ * add Gpio dispose for cleaning up native resources
+ * code cleanup
+
+## 0.4.0-dev.1
  * BREAKING CHANGES rework and simplify API
  * Upgrade for pre-2.0 and fix analyzer issues
  * Format dart code using dartfmt

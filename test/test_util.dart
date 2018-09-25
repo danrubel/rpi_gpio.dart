@@ -3,6 +3,9 @@ import 'dart:io';
 import 'package:rpi_gpio/gpio.dart';
 import 'package:test/test.dart';
 
+/// Shared GPIO instance
+Gpio gpio;
+
 expectThrows(f()) {
   try {
     f();

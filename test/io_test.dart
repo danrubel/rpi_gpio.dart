@@ -6,9 +6,13 @@ import 'package:test/test.dart';
 
 import 'test_util.dart';
 
-main() => runTests(new RpiGpio());
+main() {
+  gpio = new RpiGpio();
+  runTests();
+  test('dispose', () => gpio.dispose());
+}
 
-runTests(Gpio gpio) {
+runTests() {
   // Current test hardware configuration:
   // pin 16 = output connected to a relay input
   //   true = LED off and relay open
@@ -18,12 +22,25 @@ runTests(Gpio gpio) {
   const outputPhysicalPin = 16;
   const inputPhysicalPin = 40;
 
+  const delay = const Duration(milliseconds: 200);
+  const timeout = const Duration(seconds: 2);
+
   GpioOutput outputPin;
   GpioInput inputPin;
 
   test('setup', () {
     outputPin = gpio.output(outputPhysicalPin);
     inputPin = gpio.input(inputPhysicalPin, Pull.up);
+  });
+
+  test('exceptions', () async {
+    // Cannot reallocate pins
+    expectThrows(() => gpio.output(outputPhysicalPin));
+    expectThrows(() => gpio.input(outputPhysicalPin));
+    expectThrows(() => gpio.input(outputPhysicalPin, Pull.up));
+    expectThrows(() => gpio.output(inputPhysicalPin));
+    expectThrows(() => gpio.input(inputPhysicalPin));
+    expectThrows(() => gpio.input(inputPhysicalPin, Pull.down));
   });
 
   test('blink', () async {
@@ -39,10 +56,10 @@ runTests(Gpio gpio) {
     for (int count = 0; count < 2; ++count) {
       outputPin.value = false; // relay on
       await waitForInputValue(inputPin, false);
-      await new Future.delayed(new Duration(milliseconds: 200));
+      await new Future.delayed(delay);
       outputPin.value = true; // relay off
       await waitForInputValue(inputPin, true);
-      await new Future.delayed(new Duration(milliseconds: 200));
+      await new Future.delayed(delay);
     }
   });
 
@@ -54,28 +71,18 @@ runTests(Gpio gpio) {
       completer.complete(newValue);
     });
     // values should send the current value when starting to listen
-    expect(await completer.future, true);
+    expect(await completer.future.timeout(timeout), true);
 
     for (int count = 0; count < 2; ++count) {
       completer = new Completer<bool>();
       outputPin.value = false; // relay on
-      expect(await completer.future, false);
-      await new Future.delayed(new Duration(milliseconds: 200));
+      expect(await completer.future.timeout(timeout), false);
+      await new Future.delayed(delay);
       completer = new Completer<bool>();
       outputPin.value = true; // relay off
-      expect(await completer.future, true);
-      await new Future.delayed(new Duration(milliseconds: 200));
+      expect(await completer.future.timeout(timeout), true);
+      await new Future.delayed(delay);
     }
-  });
-
-  test('exceptions', () async {
-    // Cannot reallocate pins
-    expectThrows(() => gpio.output(outputPhysicalPin));
-    expectThrows(() => gpio.input(outputPhysicalPin));
-    expectThrows(() => gpio.input(outputPhysicalPin, Pull.up));
-    expectThrows(() => gpio.output(inputPhysicalPin));
-    expectThrows(() => gpio.input(inputPhysicalPin));
-    expectThrows(() => gpio.input(inputPhysicalPin, Pull.down));
   });
 
   tearDownAll(() {
