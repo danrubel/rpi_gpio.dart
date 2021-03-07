@@ -9,7 +9,7 @@ import 'exampleApp.dart';
 /// so that it does not reference the [RpiGpio] native libary
 /// and thus can be tested with a mock [Gpio] on any platform.
 main() async {
-  final gpio = new RpiGpio();
+  final gpio = RpiGpio();
   await runExample(gpio);
   gpio.dispose();
 }

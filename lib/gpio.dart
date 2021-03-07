@@ -17,6 +17,10 @@ abstract class Gpio {
   /// where [physicalPin] is the physical pin number not the GPIO number.
   GpioOutput output(int physicalPin);
 
+  /// Return a GPIO pin configured for software based PWM,
+  /// where [physicalPin] is the physical pin number not the GPIO number.
+  GpioPwm pwm(int physicalPin);
+
   /// Set the polling frequency for any [GpioInput.values] streams.
   /// The default polling frequency is every 10 milliseconds.
   /// Pass `null` to turn off polling.
@@ -29,7 +33,7 @@ abstract class Gpio {
     if (physicalPin < 0 ||
         physicalPin >= physToBcmGpioRPi2.length ||
         physToBcmGpioRPi2[physicalPin] < 0) {
-      throw new GpioException('Invalid pin', physicalPin);
+      throw GpioException('Invalid pin', physicalPin);
     }
     if (_allocatedPins.contains(physicalPin)) {
       throwPinAlreadyAllocated(physicalPin);
@@ -38,7 +42,7 @@ abstract class Gpio {
   }
 
   void throwPinAlreadyAllocated(int physicalPin) {
-    throw new GpioException('Already allocated', physicalPin);
+    throw GpioException('Already allocated', physicalPin);
   }
 }
 
@@ -54,6 +58,13 @@ abstract class GpioInput {
 /// A GPIO output pin.
 abstract class GpioOutput {
   set value(bool newValue);
+}
+
+/// A GPIO software driven PWM pin.
+abstract class GpioPwm {
+  /// Sets the percent of time that the GPIO pin is on/high/true,
+  /// where 0 is off/low/false all of the time and 100 is on/high/true all of the time.
+  set dutyCycle(int percentOn);
 }
 
 /// A [GpioInput] can have an internal pull up or pull down resistor.

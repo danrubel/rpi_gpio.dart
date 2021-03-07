@@ -7,7 +7,7 @@ import 'package:test/test.dart';
 import 'test_util.dart';
 
 main() {
-  gpio = new RpiGpio();
+  gpio = RpiGpio();
   runTests();
   test('dispose', () => gpio.dispose());
 }
@@ -22,8 +22,8 @@ runTests() {
   const outputPhysicalPin = 16;
   const inputPhysicalPin = 40;
 
-  const delay = const Duration(milliseconds: 200);
-  const timeout = const Duration(seconds: 2);
+  const delay = Duration(milliseconds: 200);
+  const timeout = Duration(seconds: 2);
 
   GpioOutput outputPin;
   GpioInput inputPin;
@@ -46,9 +46,9 @@ runTests() {
   test('blink', () async {
     for (int count = 0; count < 3; ++count) {
       outputPin.value = false; // relay on
-      await new Future.delayed(new Duration(milliseconds: 500));
+      await Future.delayed(Duration(milliseconds: 500));
       outputPin.value = true; // relay off
-      await new Future.delayed(new Duration(milliseconds: 500));
+      await Future.delayed(Duration(milliseconds: 500));
     }
   });
 
@@ -56,17 +56,17 @@ runTests() {
     for (int count = 0; count < 2; ++count) {
       outputPin.value = false; // relay on
       await waitForInputValue(inputPin, false);
-      await new Future.delayed(delay);
+      await Future.delayed(delay);
       outputPin.value = true; // relay off
       await waitForInputValue(inputPin, true);
-      await new Future.delayed(delay);
+      await Future.delayed(delay);
     }
   });
 
   StreamSubscription<bool> subscription;
 
   test('values stream', () async {
-    Completer<bool> completer = new Completer<bool>();
+    Completer<bool> completer = Completer<bool>();
     subscription = inputPin.values.listen((bool newValue) {
       completer.complete(newValue);
     });
@@ -74,14 +74,14 @@ runTests() {
     expect(await completer.future.timeout(timeout), true);
 
     for (int count = 0; count < 2; ++count) {
-      completer = new Completer<bool>();
+      completer = Completer<bool>();
       outputPin.value = false; // relay on
       expect(await completer.future.timeout(timeout), false);
-      await new Future.delayed(delay);
-      completer = new Completer<bool>();
+      await Future.delayed(delay);
+      completer = Completer<bool>();
       outputPin.value = true; // relay off
       expect(await completer.future.timeout(timeout), true);
-      await new Future.delayed(delay);
+      await Future.delayed(delay);
     }
   });
 
@@ -95,7 +95,7 @@ waitForInputValue(GpioInput pin, bool expectedValue) async {
   final start = nowMillis;
   while (nowMillis - start < 2000) {
     if (pin.value == expectedValue) return;
-    await new Future.delayed(new Duration(milliseconds: 10));
+    await Future.delayed(Duration(milliseconds: 10));
   }
   throw 'timeout';
 }

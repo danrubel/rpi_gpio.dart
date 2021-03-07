@@ -20,7 +20,7 @@ void buildbot() => null;
 void coverage() {
   final String coverageToken = Platform.environment['REPO_TOKEN'];
   if (coverageToken != null) {
-    PubApp coverallsApp = new PubApp.global('dart_coveralls');
+    PubApp coverallsApp = PubApp.global('dart_coveralls');
     coverallsApp.run([
       'report',
       '--token',
@@ -39,6 +39,7 @@ void coverage() {
 Future test() async {
   print(Directory.current);
   if (isRaspberryPi) {
-    new TestRunner().testAsync(files: 'test/all.dart');
+    // ignore: unawaited_futures
+    TestRunner().testAsync(files: 'test/all.dart');
   }
 }

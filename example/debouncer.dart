@@ -10,17 +10,17 @@ class Debouncer implements StreamTransformerBase<bool, bool> {
   Timer _debounceTimer;
 
   Debouncer(this.value, int debounceMilliseconds)
-      : debounceDuration = new Duration(milliseconds: debounceMilliseconds);
+      : debounceDuration = Duration(milliseconds: debounceMilliseconds);
 
   @override
   Stream<bool> bind(Stream<bool> stream) {
     if (_controller != null) throw 'cannout use debouncer twice';
     StreamSubscription<bool> subscription;
-    _controller = new StreamController<bool>(onListen: () {
+    _controller = StreamController<bool>(onListen: () {
       subscription = stream.listen((bool newValue) {
         _lastValue = newValue;
         _debounceTimer?.cancel();
-        _debounceTimer = new Timer(debounceDuration, () {
+        _debounceTimer = Timer(debounceDuration, () {
           if (value != _lastValue) {
             value = _lastValue;
             _controller.add(_lastValue);

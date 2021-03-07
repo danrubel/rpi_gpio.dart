@@ -1,5 +1,5 @@
 /// Mapping from physical pin on RPi model 2 and 3 to BCM GPIO.
-const physToBcmGpioRPi2 = const <int>[
+const physToBcmGpioRPi2 = <int>[
   -1, //     0
   -1, -1, // 1, 2
   02, -1,

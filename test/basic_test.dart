@@ -13,13 +13,13 @@ main() {
 
   RpiGpio gpio;
   test('instantiate', () {
-    gpio = new RpiGpio();
+    gpio = RpiGpio();
   });
 
   test('exceptions', () async {
     // Only one instance of GPIO factory
     try {
-      new RpiGpio();
+      RpiGpio();
       fail('expected exception');
     } on GpioException {
       // Expected... fall through
@@ -37,7 +37,7 @@ main() {
   test('dispose', () => gpio.dispose());
 
   test('allow I2C and SPI as GPIO', () {
-    gpio = new RpiGpio(i2c: false, spi: false);
+    gpio = RpiGpio(i2c: false, spi: false);
     try {
       expect(gpio.output(3), isNotNull); // I2C
       expect(gpio.output(19), isNotNull); // SPI0

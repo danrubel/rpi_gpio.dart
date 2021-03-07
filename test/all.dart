@@ -9,10 +9,10 @@ import 'test_util.dart';
 
 main() {
   group('basic', () => basic.main());
-  test('instantiate', () => gpio = new RpiGpio());
+  test('instantiate', () => gpio = RpiGpio());
   group('io', () => io.runTests());
   test('dispose', () => gpio.dispose());
   // example
-  group('debounder', () => debouncer.main());
+  group('debouncer', () => debouncer.main());
   group('example', () => example.main());
 }

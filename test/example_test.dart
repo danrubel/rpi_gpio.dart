@@ -6,26 +6,29 @@ import 'package:test/test.dart';
 import '../example/exampleApp.dart';
 
 main() {
-  const timeout = const Duration(milliseconds: 100);
-  const ms1 = const Duration(milliseconds: 1);
-  const ms3 = const Duration(milliseconds: 3);
+  const timeout = Duration(milliseconds: 200);
+  const ms1 = Duration(milliseconds: 1);
+  const ms3 = Duration(milliseconds: 3);
 
-  final gpio = new MockGpio();
+  final gpio = MockGpio();
   Future finished;
 
   test('start', () async {
-    Future<bool> blink = gpio.led.blinkTimes(3).timeout(timeout);
+    Future<bool> blink = gpio.led.blinkTimes(3 * dutyCycleValues.length).timeout(timeout);
     finished = runExample(gpio, blink: ms1, debounce: 1);
     expect(await blink, isTrue);
+    expect(gpio.pwmLed.dutyCycleValue, 100);
+    await Future.delayed(ms3);
+    expect(gpio.pwmLed.dutyCycleValue, 0);
   });
 
   test('button', () async {
     Future<bool> blink = gpio.led.blinkTimes(3).timeout(timeout);
     for (int count = 0; count < 3; ++count) {
       gpio.button.value = true;
-      await new Future.delayed(ms3);
+      await Future.delayed(ms3);
       gpio.button.value = false;
-      await new Future.delayed(ms3);
+      await Future.delayed(ms3);
     }
     expect(await blink, isTrue);
   });
@@ -38,8 +41,9 @@ main() {
 }
 
 class MockGpio extends Gpio {
-  final button = new MockButton();
-  final led = new MockLed();
+  final button = MockButton();
+  final led = MockLed();
+  final pwmLed = MockPwmLed();
   bool disposed = false;
 
   @override
@@ -57,7 +61,7 @@ class MockGpio extends Gpio {
 
   @override
   GpioOutput output(int physicalPin) {
-    if (physicalPin == 12) {
+    if (physicalPin == 15) {
       return led;
     }
     throw 'unsupported pin $physicalPin';
@@ -66,6 +70,14 @@ class MockGpio extends Gpio {
   @override
   set pollingFrequency(Duration frequency) {
     throw 'not implemented';
+  }
+
+  @override
+  GpioPwm pwm(int physicalPin) {
+    if (physicalPin == 12) {
+      return pwmLed;
+    }
+    throw 'unsupported pin $physicalPin';
   }
 }
 
@@ -87,7 +99,7 @@ class MockButton extends GpioInput {
   @override
   Stream<bool> get values {
     if (_valuesController != null) throw 'invalid call';
-    _valuesController = new StreamController(onListen: () {
+    _valuesController = StreamController(onListen: () {
       _valuesController.add(_value);
     }, onCancel: () {
       _valuesController = null;
@@ -116,7 +128,16 @@ class MockLed extends GpioOutput {
   Future<bool> blinkTimes(int count) {
     if (blinkCount != null) throw 'already waiting for blink';
     blinkCount = count;
-    blinkCompleter = new Completer<bool>();
+    blinkCompleter = Completer<bool>();
     return blinkCompleter.future;
+  }
+}
+
+class MockPwmLed extends GpioPwm {
+  int dutyCycleValue;
+
+  @override
+  void set dutyCycle(int percentOn) {
+    dutyCycleValue = percentOn;
   }
 }

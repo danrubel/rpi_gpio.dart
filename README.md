@@ -1,7 +1,6 @@
 # rpi_gpio.dart
 
 [![pub package](https://img.shields.io/pub/v/rpi_gpio.svg)](https://pub.dartlang.org/packages/rpi_gpio)
-[![Build Status](https://travis-ci.org/danrubel/rpi_gpio.dart.svg?branch=master)](https://travis-ci.org/danrubel/rpi_gpio.dart)
 
 rpi_gpio is a Dart package for accessing the Raspberry Pi GPIO pins.
 
@@ -47,7 +46,7 @@ to compile the native librpi_gpio_ext.so library for the rpi_gpio package.
 The [example](example/example.dart) launches the [example app](example/exampleApp.dart)
 to demonstrate:
 
- * Blinking an LED.
+ * Blinking an LED along with software based PWM on a second LED.
 
  * Responding to a button press by turning on an LED.
 

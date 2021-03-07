@@ -15,15 +15,13 @@ expectThrows(f()) {
   }
 }
 
-int get nowMillis => new DateTime.now().millisecondsSinceEpoch;
+int get nowMillis => DateTime.now().millisecondsSinceEpoch;
 
 /// Return [true] if this is running on a Raspberry Pi.
 bool get isRaspberryPi {
   if (Platform.isLinux) {
     try {
-      return new File('/etc/os-release')
-          .readAsLinesSync()
-          .contains('ID=raspbian');
+      return File('/etc/os-release').readAsLinesSync().contains('ID=raspbian');
     } on FileSystemException catch (_) {
       // fall through
     }

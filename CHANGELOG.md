@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1-dev.1
+ * add `GpioPwm` pin for software based PWM
+ * update SDK requirement to 2.8.4
+ * update dependencies
+ * code style cleanup
+
 ## 0.5.0
  * BREAKING: automatically allocate I2C, SPI, and EEPROM pins
      unless flag in RpiGpio constructor is set to false
