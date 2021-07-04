@@ -7,7 +7,7 @@ import 'debouncer.dart';
 
 const dutyCycleValues = [100, 50, 100, 25, 100, 10, 100];
 
-Future runExample(Gpio gpio, {Duration blink, int debounce}) async {
+Future runExample(Gpio gpio, {Duration? blink, int? debounce}) async {
   blink ??= const Duration(milliseconds: 500);
   debounce ??= 250;
 

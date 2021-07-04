@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.0
+* migrate to null safety
+* update build script to work on Windows
+
 ## 0.6.0
  * rename `build_lib` to `build_native`
  * move all native operations to separate isolate so that PWM and polling continue to work

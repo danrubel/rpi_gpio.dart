@@ -1,5 +1,5 @@
 /// The PWM node having the smallest duty cycle, or `null` if none.
-PwmNode firstPwmNode;
+PwmNode? firstPwmNode;
 
 /// A Gpio pin having a specific pulse width modulated duty cycle enabled.
 abstract class PwmNode {
@@ -7,7 +7,7 @@ abstract class PwmNode {
   final int dutyCycle;
 
   /// The next PWM node having the next larger duty cycle or `null` if none.
-  PwmNode nextNode;
+  PwmNode? nextNode;
 
   PwmNode(this.bcmGpioPin, this.dutyCycle);
 
@@ -22,8 +22,8 @@ abstract class PwmNode {
 /// Insert [newNode] into the list of [PwmNode]s sorted by duty cycle.
 /// This assumes that [newNode] is not already in the list.
 void addPwmNode(PwmNode newNode) {
-  PwmNode previousNode;
-  PwmNode node = firstPwmNode;
+  PwmNode? previousNode;
+  PwmNode? node = firstPwmNode;
   while (node != null) {
     if (newNode.dutyCycle < node.dutyCycle) break;
     previousNode = node;
@@ -41,9 +41,9 @@ void addPwmNode(PwmNode newNode) {
 
 /// Remove and return the [PwmNode] associated with the specified pin
 /// or return `null` if no such node is found in the list.
-PwmNode removePwmNode(int bcmGpioPin) {
-  PwmNode previousNode;
-  PwmNode node = firstPwmNode;
+PwmNode? removePwmNode(int bcmGpioPin) {
+  PwmNode? previousNode;
+  PwmNode? node = firstPwmNode;
   while (node != null) {
     if (node.bcmGpioPin == bcmGpioPin) {
       if (previousNode == null)
@@ -92,7 +92,7 @@ void _runPwm() async {
 /// Update the [PwmNode]s and advance the [currentPwmTick].
 /// Return the [Duration] until the next time that [updatePwm] should be called
 /// or `null` if there are no [PwmNode]s.
-Duration updatePwm() {
+Duration? updatePwm() {
   var node = firstPwmNode;
   if (node == null) {
     currentPwmTick = 0;

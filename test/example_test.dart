@@ -8,8 +8,8 @@ import '../example/exampleApp.dart';
 import 'mock_isolate.dart';
 
 main() {
-  RpiGpio gpio;
-  AckHandler ackHandler;
+  RpiGpio? gpio;
+  late AckHandler ackHandler;
 
   test('setup', () async {
     ackHandler = AckHandler();
@@ -22,7 +22,7 @@ main() {
   });
 
   test('example start', () async {
-    runExample(gpio, blink: Duration(milliseconds: 1), debounce: 1);
+    runExample(gpio!, blink: Duration(milliseconds: 1), debounce: 1);
     await ackHandler.is18Setup.future;
     await ackHandler.is22Setup.future;
   });
@@ -57,9 +57,9 @@ main() {
 }
 
 class AckHandler {
-  RpiGpio gpio;
+  RpiGpio? gpio;
   final receivePort = ReceivePort('test example ack handler');
-  StreamSubscription subscription;
+  late StreamSubscription subscription;
 
   final isSetup = Completer();
   final is17Setup = Completer();
@@ -101,7 +101,7 @@ class AckHandler {
             if (gpio == null) return;
             buttonState = !buttonState;
             ++buttonToggledCount;
-            gpio.testCmd([17, buttonState]);
+            gpio!.testCmd([17, buttonState]);
             return;
         }
         break;

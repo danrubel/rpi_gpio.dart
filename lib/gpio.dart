@@ -74,7 +74,7 @@ enum Pull { off, down, up }
 /// Exceptions thrown by GPIO.
 class GpioException {
   final String message;
-  final int physicalPin;
+  final int? physicalPin;
 
   GpioException(this.message, [this.physicalPin]);
 

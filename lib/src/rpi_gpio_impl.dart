@@ -10,11 +10,11 @@ import 'package:rpi_gpio/src/rpi_gpio_comm.dart' as comm;
 class RpiGpio extends Gpio {
   static bool _instantiatedGpio = false;
 
-  SendPort _sendPort;
-  StreamSubscription _receivePortSubscription;
-  StreamSubscription _onErrorSubscription;
-  final Completer<GpioException> _onError;
-  _RpiGpioResponseHandler _rspHandler;
+  late SendPort _sendPort;
+  late StreamSubscription _receivePortSubscription;
+  late StreamSubscription _onErrorSubscription;
+  final Completer<GpioException>? _onError;
+  late _RpiGpioResponseHandler _rspHandler;
 
   /// Instantiate a new GPIO manager.
   /// Clients should use [initialize_RpiGpio].
@@ -22,9 +22,9 @@ class RpiGpio extends Gpio {
     bool i2c = true,
     bool spi = true,
     bool eeprom = true,
-    Completer<GpioException> onError,
-    Function(SendPort sendPort) isolateEntryPoint,
-    SendPort testSendPort,
+    Completer<GpioException>? onError,
+    required Function(SendPort sendPort) isolateEntryPoint,
+    SendPort? testSendPort,
   }) async {
     if (_instantiatedGpio) throw GpioException('RpiGpio already instantiated');
     _instantiatedGpio = true;
@@ -65,9 +65,9 @@ class RpiGpio extends Gpio {
 
   RpiGpio._(
     this._onError, {
-    bool i2c,
-    bool spi,
-    bool eeprom,
+    required bool i2c,
+    required bool spi,
+    required bool eeprom,
   }) {
     if (i2c) physI2CPins.forEach(allocatePin);
     if (spi) physSpiPins.forEach(allocatePin);
@@ -105,7 +105,7 @@ class RpiGpio extends Gpio {
     const timeout = Duration(seconds: 30);
     _sendPort.send(comm.disposeCmd());
     _rspHandler.disposeCompleter = Completer();
-    await _rspHandler.disposeCompleter.future.timeout(timeout, onTimeout: () {
+    await _rspHandler.disposeCompleter!.future.timeout(timeout, onTimeout: () {
       throw GpioException('dispose timeout');
     });
     await _cleanup();
@@ -114,7 +114,7 @@ class RpiGpio extends Gpio {
   void _handleIsolateError(GpioException error) async {
     await _cleanup();
     if (_onError == null) throw error;
-    _onError.completeError(error);
+    _onError!.completeError(error);
   }
 
   Future _cleanup() async {
@@ -157,16 +157,12 @@ class _RpiGpioResponseHandler implements comm.ResponseHandler {
   final initCompleter = Completer();
   final valueCompleters = <Completer<bool>>[];
   final pollingMap = <int, RpiGpioInput>{};
-  Completer disposeCompleter;
+  Completer? disposeCompleter;
 
   _RpiGpioResponseHandler(this.rpiGpio);
 
   @override
   void initCompleteRsp(SendPort sendPort) {
-    if (sendPort == null) {
-      initCompleter.completeError(GpioException('sendPort not initialized'));
-      return;
-    }
     rpiGpio._sendPort = sendPort;
     initCompleter.complete(true);
   }
@@ -184,7 +180,7 @@ class _RpiGpioResponseHandler implements comm.ResponseHandler {
 
   @override
   void disposeCompleteRsp() {
-    disposeCompleter.complete();
+    disposeCompleter!.complete();
   }
 
   @override
@@ -200,7 +196,7 @@ class _RpiGpioResponseHandler implements comm.ResponseHandler {
     if (!initCompleter.isCompleted) {
       initCompleter.completeError(error);
     } else if (disposeCompleter?.isCompleted == false) {
-      disposeCompleter.completeError(error);
+      disposeCompleter!.completeError(error);
     } else {
       rpiGpio._handleIsolateError(error);
     }
@@ -219,7 +215,7 @@ class _RpiGpioCommon {
 class RpiGpioInput extends _RpiGpioCommon with GpioInput {
   final Pull pull;
 
-  StreamController<bool> _valuesController;
+  StreamController<bool>? _valuesController;
 
   RpiGpioInput._(RpiGpio gpio, int physicalPin, this.pull)
       : super._(gpio, physicalPin) {
@@ -249,7 +245,7 @@ class RpiGpioInput extends _RpiGpioCommon with GpioInput {
       gpio._rspHandler.pollingMap.remove(bcmGpioPin);
       _valuesController = null;
     });
-    return _valuesController.stream;
+    return _valuesController!.stream;
   }
 }
 
@@ -265,7 +261,6 @@ class RpiGpioOutput extends _RpiGpioCommonOutput with GpioOutput {
 
   @override
   set value(bool newValue) {
-    if (newValue == null) throw GpioException('Invalid value', physicalPin);
     gpio._sendPort.send(comm.writeCmd(bcmGpioPin, newValue));
   }
 }

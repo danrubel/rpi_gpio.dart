@@ -82,7 +82,7 @@ class RpiGpioCmdHandler implements comm.CommandHandler {
 class RpiPolledNode extends PolledNode {
   final RpiGpioLib gpioLib;
   final SendPort sendPort;
-  bool lastValue;
+  bool? lastValue;
 
   RpiPolledNode(this.gpioLib, this.sendPort, int bcmGpioPin)
       : super(bcmGpioPin);

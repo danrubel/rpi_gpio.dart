@@ -18,7 +18,7 @@ void buildbot() => null;
 
 @Task('Gather and send coverage data.')
 void coverage() {
-  final String coverageToken = Platform.environment['REPO_TOKEN'];
+  final String? coverageToken = Platform.environment['REPO_TOKEN'];
   if (coverageToken != null) {
     PubApp coverallsApp = PubApp.global('dart_coveralls');
     coverallsApp.run([

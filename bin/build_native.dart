@@ -8,30 +8,25 @@ const buildScriptVersion = 2;
 
 main(List<String> args) {
   // Locate the Dart SDK
-  File dartVm = File(Platform.executable);
+  final dartVm = File(Platform.resolvedExecutable);
   print('Dart VM... ${dartVm.path}');
-  if (!dartVm.isAbsolute) {
-    dartVm = File.fromUri(Directory.current.uri.resolve(dartVm.path));
-    print('Dart VM... ${dartVm.path}');
-  }
-  abortIf(!dartVm.isAbsolute, 'Failed to find absolute path to Dart VM');
 
   // Locate Dart SDK
   final dartSdk = dartVm.parent.parent;
   print('Dart SDK... ${dartSdk.path}');
 
   // Locate dart_api.h
-  final headerPath = 'include/dart_api.h';
+  final headerPath = join('include', 'dart_api.h');
   final headerFile = File.fromUri(dartSdk.uri.resolve(headerPath));
   abortIf(!headerFile.existsSync(), 'Failed to find $headerPath');
 
   // Run pub list to determine the location of the GPIO package being used
-  final pub = File.fromUri(dartSdk.uri.resolve('bin/pub'));
-  String pubOut =
+  final pub = File.fromUri(dartSdk.uri.resolve(join('bin', 'pub')));
+  var pubOut =
       Process.runSync(pub.path, ['list-package-dirs']).stdout as String;
-  Map<String, dynamic> pubResult = jsonDecode(pubOut) as Map<String, dynamic>;
+  var pubResult = jsonDecode(pubOut) as Map<String, dynamic>;
   assertNoPubListError(pubResult);
-  String dirName = pubResult['packages'][pkgName] as String;
+  var dirName = pubResult['packages'][pkgName] as String;
   final pkgDir = Directory(dirName);
   print('Building library in ${pkgDir.path}');
 
@@ -72,8 +67,8 @@ void abortIf(bool condition, String message) {
 void assertNoPubListError(Map<String, dynamic> pubResult) {
   var error = pubResult['error'];
   if (error == null) {
-    Map<String, dynamic> packages =
-        pubResult['packages'] as Map<String, dynamic>;
+    Map<String, dynamic>? packages =
+        pubResult['packages'] as Map<String, dynamic>?;
     if (packages != null) {
       var rpiGpio = packages[pkgName];
       if (rpiGpio != null) {
@@ -93,8 +88,13 @@ void assertNoPubListError(Map<String, dynamic> pubResult) {
 
 /// Assert that this script is executing on the Raspberry Pi.
 assertRunningOnRaspberryPi() {
-  if (!Directory('/home/pi').existsSync()) {
-    print('Not running on Raspberry Pi... skipping build');
-    throw 'Aborting build';
+  // Check for Windows 11 running on RPi
+  if (Platform.isWindows) {
+    print('Running Windows... hopefully on the Raspberry Pi...');
+    return;
   }
+  // Check for typical Raspbian install
+  if (Directory('/home/pi').existsSync()) return;
+  print('Not running on Raspberry Pi... skipping build');
+  throw 'Aborting build';
 }

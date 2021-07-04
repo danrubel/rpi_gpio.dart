@@ -17,7 +17,7 @@ Future<RpiGpio> initialize_RpiGpio({
   bool i2c = true,
   bool spi = true,
   bool eeprom = true,
-  Completer<GpioException> onError,
+  Completer<GpioException>? onError,
 }) =>
     RpiGpio.init(
       i2c: i2c,

@@ -19,7 +19,7 @@ void main() {
     expect(pollingTimer, isNotNull);
 
     newNode.polled = Completer();
-    await newNode.polled.future;
+    await newNode.polled!.future;
 
     var node = removePolledNode(8);
     expect(node, isNull);
@@ -27,7 +27,7 @@ void main() {
     expect(pollingTimer, isNotNull);
 
     newNode.polled = Completer();
-    await newNode.polled.future;
+    await newNode.polled!.future;
 
     node = removePolledNode(6);
     expect(node, same(newNode));
@@ -48,7 +48,7 @@ void main() {
     expect(pollingTimer, isNotNull);
 
     newNode2.polled = Completer();
-    await newNode2.polled.future;
+    await newNode2.polled!.future;
 
     var node = removePolledNode(8);
     expect(node, isNull);
@@ -56,7 +56,7 @@ void main() {
     expect(pollingTimer, isNotNull);
 
     newNode1.polled = Completer();
-    await newNode1.polled.future;
+    await newNode1.polled!.future;
 
     node = removePolledNode(6);
     expect(node, same(newNode1));
@@ -64,7 +64,7 @@ void main() {
     expect(pollingTimer, isNotNull);
 
     newNode2.polled = Completer();
-    await newNode2.polled.future;
+    await newNode2.polled!.future;
 
     node = removePolledNode(9);
     expect(node, same(newNode2));
@@ -78,7 +78,7 @@ void main() {
 }
 
 class MockPolledNode extends PolledNode {
-  Completer<void> polled;
+  Completer<void>? polled;
 
   MockPolledNode(int bcmGpioPin) : super(bcmGpioPin);
 

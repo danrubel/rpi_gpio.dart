@@ -27,7 +27,7 @@ void addPolledNode(PolledNode newNode) {
 
 /// Remove and return the [PolledNode] associated with the specified pin
 /// or return `null` if no such node is found in the list.
-PolledNode removePolledNode(int bcmGpioPin) {
+PolledNode? removePolledNode(int bcmGpioPin) {
   for (int index = 0; index < polledNodes.length; ++index) {
     if (polledNodes[index].bcmGpioPin == bcmGpioPin) {
       var node = polledNodes.removeAt(index);
@@ -42,7 +42,7 @@ PolledNode removePolledNode(int bcmGpioPin) {
 Duration pollingFrequency = Duration(milliseconds: 10);
 
 /// The timer for polling or `null` if no pins are being polled.
-Timer pollingTimer;
+Timer? pollingTimer;
 
 void setPollingFrequency(Duration frequency) {
   if (pollingFrequency != frequency) {

@@ -25,7 +25,7 @@ const writeAck = 5;
 class MockGpioLibImpl implements RpiGpioLib {
   bool setupComplete = false;
   bool disposed = false;
-  SendPort testSendPort;
+  SendPort? testSendPort;
   final gpioInputValues = <int, bool>{};
 
   int setupGpio() {
@@ -36,29 +36,29 @@ class MockGpioLibImpl implements RpiGpioLib {
 
   int disposeGpio() {
     if (disposed) throw 'dispose already called';
-    testSendPort.send([disposeAck]);
+    testSendPort!.send([disposeAck]);
     return 0;
   }
 
   void setGpioInput(int bcmGpioPin, int pullUpDown) {
     _checkSetup();
-    testSendPort.send([setInputAck, bcmGpioPin, pullUpDown]);
+    testSendPort!.send([setInputAck, bcmGpioPin, pullUpDown]);
   }
 
   bool readGpio(int bcmGpioPin) {
     _checkSetup();
-    testSendPort.send([readAck, bcmGpioPin]);
+    testSendPort!.send([readAck, bcmGpioPin]);
     return gpioInputValues[bcmGpioPin] ?? false;
   }
 
   void setGpioOutput(int bcmGpioPin) {
     _checkSetup();
-    testSendPort.send([setOutputAck, bcmGpioPin]);
+    testSendPort!.send([setOutputAck, bcmGpioPin]);
   }
 
   void writeGpio(int bcmGpioPin, bool newValue) {
     _checkSetup();
-    testSendPort.send([writeAck, bcmGpioPin, newValue]);
+    testSendPort!.send([writeAck, bcmGpioPin, newValue]);
   }
 
   @override
@@ -66,7 +66,7 @@ class MockGpioLibImpl implements RpiGpioLib {
     if (data is SendPort) {
       if (testSendPort != null) throw 'test send port already set';
       testSendPort = data;
-      if (setupComplete) testSendPort.send([setupAck]);
+      if (setupComplete) testSendPort!.send([setupAck]);
       return;
     }
     if (data is List && data.length == 2) {
