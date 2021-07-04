@@ -43,7 +43,7 @@ main(List<String> args) {
 
   // Build the native library
   final nativeDir = Directory(join(pkgDir.path, 'src', 'native'));
-  final buildScriptFile = File(join(nativeDir.path, 'build_lib'));
+  final buildScriptFile = File(join(nativeDir.path, 'build_native'));
   assertRunningOnRaspberryPi();
   final buildResult = Process.runSync(
       buildScriptFile.path, [buildScriptVersion.toString(), dartSdk.path]);

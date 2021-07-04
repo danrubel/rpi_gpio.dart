@@ -8,7 +8,7 @@
 #
 # Typically, this script is run by calling
 #
-#    pub global run rpi_gpio:build_lib
+#    pub global run rpi_gpio:build_native
 #
 # See README for setup instructions
 
@@ -31,4 +31,4 @@ g++ -fPIC -I$DARTSDK/ -c rpi_gpio_ext.cc
 gcc -shared -lpthread -Wl,-soname,librpi_gpio_ext.so -o librpi_gpio_ext.so rpi_gpio_ext.o
 
 # Copy the library
-cp librpi_gpio_ext.so ../../librpi_gpio_ext.so
+cp librpi_gpio_ext.so ../librpi_gpio_ext.so

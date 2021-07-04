@@ -7,7 +7,8 @@ abstract class Gpio {
   final _allocatedPins = <int>[];
 
   /// Call dispose before exiting your application to cleanup native resources.
-  void dispose();
+  /// Returns a future that completes when cleanup has finished.
+  Future dispose();
 
   /// Return a GPIO pin configured for input,
   /// where [physicalPin] is the physical pin number not the GPIO number.
@@ -48,7 +49,7 @@ abstract class Gpio {
 
 /// A GPIO input pin.
 abstract class GpioInput {
-  bool get value;
+  Future<bool> get value;
 
   /// When the value of the input changes,
   /// the new value is appended to the returned stream.

@@ -1,7 +1,11 @@
+import 'dart:async';
+import 'dart:isolate';
+
 import 'package:rpi_gpio/gpio.dart';
-import 'package:rpi_gpio/rpi_gpio.dart';
+import 'package:rpi_gpio/src/rpi_gpio_impl.dart';
 import 'package:test/test.dart';
 
+import 'mock_isolate.dart';
 import 'test_util.dart';
 
 main() {
@@ -12,14 +16,27 @@ main() {
   });
 
   RpiGpio gpio;
-  test('instantiate', () {
-    gpio = RpiGpio();
+  ReceivePort receivePort;
+  StreamSubscription subscription;
+
+  test('instantiate', () async {
+    receivePort = ReceivePort('basic test');
+    subscription = receivePort.listen((message) {
+      print('basic test ack: $message');
+    });
+    gpio = await RpiGpio.init(
+      isolateEntryPoint: isolateMockMain,
+      testSendPort: receivePort.sendPort,
+    );
   });
 
   test('exceptions', () async {
     // Only one instance of GPIO factory
     try {
-      RpiGpio();
+      await RpiGpio.init(
+        isolateEntryPoint: isolateMockMain,
+        testSendPort: receivePort.sendPort,
+      );
       fail('expected exception');
     } on GpioException {
       // Expected... fall through
@@ -34,15 +51,36 @@ main() {
     expectThrows(() => gpio.output(19)); // SPI0
   });
 
-  test('dispose', () => gpio.dispose());
+  test('dispose', () async {
+    await gpio?.dispose();
+    await subscription?.cancel();
+    receivePort?.close();
+    gpio = null;
+    receivePort = null;
+    subscription = null;
+  });
 
-  test('allow I2C and SPI as GPIO', () {
-    gpio = RpiGpio(i2c: false, spi: false);
-    try {
-      expect(gpio.output(3), isNotNull); // I2C
-      expect(gpio.output(19), isNotNull); // SPI0
-    } finally {
-      gpio.dispose();
-    }
+  test('allow I2C and SPI as GPIO', () async {
+    receivePort = ReceivePort('basic test');
+    subscription = receivePort.listen((message) {
+      print('basic test ack: $message');
+    });
+    gpio = await RpiGpio.init(
+      i2c: false,
+      spi: false,
+      isolateEntryPoint: isolateMockMain,
+      testSendPort: receivePort.sendPort,
+    );
+    expect(gpio.output(3), isNotNull); // I2C
+    expect(gpio.output(19), isNotNull); // SPI0
+  });
+
+  test('dispose', () async {
+    await gpio?.dispose();
+    await subscription?.cancel();
+    receivePort?.close();
+    gpio = null;
+    receivePort = null;
+    subscription = null;
   });
 }

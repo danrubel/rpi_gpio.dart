@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:rpi_gpio/gpio.dart';
 
@@ -18,21 +19,27 @@ Future runExample(Gpio gpio, {Duration blink, int debounce}) async {
     print('PWM Led brightness $dutyCycle %');
     for (int count = 0; count < 3; ++count) {
       led.value = true;
-      await Future.delayed(blink);
+      // sleep blocks this thread, but not the RpiGpio isolate
+      // so polling and pulse width modulation continue to operate
+      sleep(blink);
       led.value = false;
-      await Future.delayed(blink);
+      sleep(blink);
     }
   }
   pwmLed.dutyCycle = 0; // off
 
-  // Wait for the button to be pressed 3 times
+  // Get the current button state
   final button = gpio.input(11);
-  bool lastValue = button.value;
+  print('Button state: ${await button.value}');
+
+  // Wait for the button to be pressed 3 times
+  bool lastValue = false;
   int count = 0;
   final completer = Completer();
   final subscription = button.values
       .transform(Debouncer(lastValue, debounce))
       .listen((bool newValue) {
+    print('New button state: $newValue');
     if (lastValue == true && !newValue) {
       ++count;
       if (count == 3) {
@@ -42,10 +49,13 @@ Future runExample(Gpio gpio, {Duration blink, int debounce}) async {
     led.value = lastValue = newValue;
   });
   print('Waiting for 3 button presses...');
-  await completer.future;
+  await completer.future.timeout(const Duration(seconds: 15), onTimeout: () {
+    print('Stopped waiting for button presses');
+  });
+  led.value = false;
 
   // Cleanup before exit
   await subscription.cancel();
-  gpio.dispose();
+  await gpio.dispose();
   print('Complete');
 }

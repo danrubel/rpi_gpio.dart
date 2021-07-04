@@ -1,143 +1,130 @@
 import 'dart:async';
+import 'dart:isolate';
 
-import 'package:rpi_gpio/gpio.dart';
+import 'package:rpi_gpio/src/rpi_gpio_impl.dart';
 import 'package:test/test.dart';
 
 import '../example/exampleApp.dart';
+import 'mock_isolate.dart';
 
 main() {
-  const timeout = Duration(milliseconds: 200);
-  const ms1 = Duration(milliseconds: 1);
-  const ms3 = Duration(milliseconds: 3);
+  RpiGpio gpio;
+  AckHandler ackHandler;
 
-  final gpio = MockGpio();
-  Future finished;
-
-  test('start', () async {
-    Future<bool> blink = gpio.led.blinkTimes(3 * dutyCycleValues.length).timeout(timeout);
-    finished = runExample(gpio, blink: ms1, debounce: 1);
-    expect(await blink, isTrue);
-    expect(gpio.pwmLed.dutyCycleValue, 100);
-    await Future.delayed(ms3);
-    expect(gpio.pwmLed.dutyCycleValue, 0);
+  test('setup', () async {
+    ackHandler = AckHandler();
+    gpio = await RpiGpio.init(
+      isolateEntryPoint: isolateMockMain,
+      testSendPort: ackHandler.receivePort.sendPort,
+    );
+    ackHandler.gpio = gpio;
+    await ackHandler.isSetup.future;
   });
 
-  test('button', () async {
-    Future<bool> blink = gpio.led.blinkTimes(3).timeout(timeout);
-    for (int count = 0; count < 3; ++count) {
-      gpio.button.value = true;
-      await Future.delayed(ms3);
-      gpio.button.value = false;
-      await Future.delayed(ms3);
-    }
-    expect(await blink, isTrue);
+  test('example start', () async {
+    runExample(gpio, blink: Duration(milliseconds: 1), debounce: 1);
+    await ackHandler.is18Setup.future;
+    await ackHandler.is22Setup.future;
   });
 
-  test('cleanup', () async {
-    await finished;
-    expect(gpio.button.subscriptionCanceled, isTrue);
-    expect(gpio.disposed, isTrue);
+  test('example blink', () async {
+    await ackHandler.is17Setup.future;
+    expect(ackHandler.write22Count, 42); // fixed blinking LED
+    expect(ackHandler.write18Count, greaterThan(6)); // PWM LED
+  });
+
+  test('example button', () async {
+    await ackHandler.is17Setup.future;
+    await ackHandler.isDisposed.future;
+    expect(ackHandler.buttonPolledCount, greaterThan(5));
+    expect(ackHandler.buttonToggledCount, greaterThan(5));
+  });
+
+  test('dispose', () async {
+    await ackHandler.isDisposed.future;
+  });
+
+  test('unexpected ack', () async {
+    // Allow time for unexpected gpio ack to propagate
+    await Future.delayed(const Duration(milliseconds: 4));
+    expect(ackHandler.unexpectedAck, isEmpty);
+  });
+
+  tearDownAll(() async {
+    await ackHandler.subscription.cancel();
+    ackHandler.receivePort.close();
   });
 }
 
-class MockGpio extends Gpio {
-  final button = MockButton();
-  final led = MockLed();
-  final pwmLed = MockPwmLed();
-  bool disposed = false;
+class AckHandler {
+  RpiGpio gpio;
+  final receivePort = ReceivePort('test example ack handler');
+  StreamSubscription subscription;
 
-  @override
-  void dispose() {
-    disposed = true;
-  }
+  final isSetup = Completer();
+  final is17Setup = Completer();
+  final is18Setup = Completer();
+  final is22Setup = Completer();
+  var write18Count = 0;
+  var write22Count = 0;
+  var buttonState = false;
+  var buttonPolledCount = 0;
+  var buttonToggledCount = 0;
+  final isDisposed = Completer();
+  final unexpectedAck = [];
 
-  @override
-  GpioInput input(int physicalPin, [Pull pull = Pull.off]) {
-    if (physicalPin == 11) {
-      return button;
-    }
-    throw 'unsupported pin $physicalPin';
-  }
-
-  @override
-  GpioOutput output(int physicalPin) {
-    if (physicalPin == 15) {
-      return led;
-    }
-    throw 'unsupported pin $physicalPin';
-  }
-
-  @override
-  set pollingFrequency(Duration frequency) {
-    throw 'not implemented';
-  }
-
-  @override
-  GpioPwm pwm(int physicalPin) {
-    if (physicalPin == 12) {
-      return pwmLed;
-    }
-    throw 'unsupported pin $physicalPin';
-  }
-}
-
-class MockButton extends GpioInput {
-  bool _value = false;
-  StreamController<bool> _valuesController;
-  bool subscriptionCanceled = false;
-
-  @override
-  bool get value => _value;
-
-  set value(bool newValue) {
-    if (_value != newValue) {
-      _value = newValue;
-      _valuesController?.add(newValue);
-    }
-  }
-
-  @override
-  Stream<bool> get values {
-    if (_valuesController != null) throw 'invalid call';
-    _valuesController = StreamController(onListen: () {
-      _valuesController.add(_value);
-    }, onCancel: () {
-      _valuesController = null;
-      subscriptionCanceled = true;
+  AckHandler() {
+    subscription = receivePort.listen((ack) {
+      handleAck(ack as List);
     });
-    return _valuesController.stream;
   }
-}
 
-class MockLed extends GpioOutput {
-  bool _value;
-  int blinkCount;
-  Completer<bool> blinkCompleter;
-
-  @override
-  set value(bool newValue) {
-    if (blinkCount != null && _value == true && !newValue) {
-      if (--blinkCount == 0) {
-        blinkCount = null;
-        blinkCompleter.complete(true);
-      }
+  void handleAck(List ack) {
+    switch (ack[0] as int) {
+      case setupAck:
+        isSetup.complete();
+        return;
+      case disposeAck:
+        isDisposed.complete();
+        return;
+      case setInputAck:
+        switch (ack[1] as int) {
+          case 17:
+            is17Setup.complete();
+            return;
+        }
+        break;
+      case readAck:
+        switch (ack[1] as int) {
+          case 17:
+            ++buttonPolledCount;
+            if (gpio == null) return;
+            buttonState = !buttonState;
+            ++buttonToggledCount;
+            gpio.testCmd([17, buttonState]);
+            return;
+        }
+        break;
+      case setOutputAck:
+        switch (ack[1] as int) {
+          case 18:
+            is18Setup.complete();
+            return;
+          case 22:
+            is22Setup.complete();
+            return;
+        }
+        break;
+      case writeAck:
+        switch (ack[1] as int) {
+          case 18:
+            ++write18Count;
+            return;
+          case 22:
+            ++write22Count;
+            return;
+        }
     }
-    _value = newValue;
-  }
-
-  Future<bool> blinkTimes(int count) {
-    if (blinkCount != null) throw 'already waiting for blink';
-    blinkCount = count;
-    blinkCompleter = Completer<bool>();
-    return blinkCompleter.future;
-  }
-}
-
-class MockPwmLed extends GpioPwm {
-  int dutyCycleValue;
-
-  @override
-  void set dutyCycle(int percentOn) {
-    dutyCycleValue = percentOn;
+    unexpectedAck.add(ack);
   }
 }

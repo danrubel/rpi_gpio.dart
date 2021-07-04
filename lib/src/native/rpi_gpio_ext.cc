@@ -322,7 +322,7 @@ void setGpioInput(Dart_NativeArguments arguments) {
 }
 
 // Initialize a GPIO pin for output.
-// void _setGpioOutput(int bcmGpio) native "setGpioOutput";
+// void _setGpioOutput(int bcmGpioPin) native "setGpioOutput";
 void setGpioOutput(Dart_NativeArguments arguments) {
   Dart_EnterScope();
   Dart_Handle arg1 = HandleError(Dart_GetNativeArgument(arguments, 1));
@@ -336,7 +336,7 @@ void setGpioOutput(Dart_NativeArguments arguments) {
 }
 
 // Initialize a GPIO pin for pulse width modulated output.
-// void _setGpioPwmOutput(int bcmGpio) native "setGpioPwmOutput";
+// void _setGpioPwmOutput(int bcmGpioPin) native "setGpioPwmOutput";
 void setGpioPwmOutput(Dart_NativeArguments arguments) {
   Dart_EnterScope();
   Dart_Handle arg1 = HandleError(Dart_GetNativeArgument(arguments, 1));
@@ -404,7 +404,7 @@ void writeGpio(Dart_NativeArguments arguments) {
 }
 
 // Set the pulse width modulated output to a value between 0 (off) and 1024 (on).
-// void _writePwmGpio(int bcmGpio, int newValue) native "writePwmGpio";
+// void _writePwmGpio(int bcmGpioPin, int newValue) native "writePwmGpio";
 void writePwmGpio(Dart_NativeArguments arguments) {
   Dart_EnterScope();
   Dart_Handle arg1 = HandleError(Dart_GetNativeArgument(arguments, 1));

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0
+ * rename `build_lib` to `build_native`
+ * move all native operations to separate isolate so that PWM and polling continue to work
+   regardless of whether the main isolate is blocked (e.g. dart:io `sleep`)
+ * BREAKING: `RpiGpio` requires async init to spin up isolate
+ * BREAKING: GpioInput.value returns `Future<bool>`
+ * `RpiGpio.dispose` returns a `Future` that completes when cleanup is complete
+ * loosen SDK requirements to allow execution on older Rasberry Pi models
+
 ## 0.5.1-dev.1
  * add `GpioPwm` pin for software based PWM
  * update SDK requirement to 2.8.4

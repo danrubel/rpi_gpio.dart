@@ -10,7 +10,7 @@ rpi_gpio is a Dart package for accessing the Raspberry Pi GPIO pins.
    for accessing the various General Purpose I/O pins on the Raspberry Pi.
 
  * [__RpiGpio__](lib/rpi_gpio.dart) provides the implementation
-   for the __Gpio__ API derived from the [WiringPi](http://wiringpi.com/) library.
+   for the __Gpio__ API derived from the WiringPi library.
 
 ## Setup
 
@@ -30,15 +30,15 @@ you upgrade the rpi_gpio package.
 2) From your application directory (the application that references
 the rpi_gpio package) run the following command to build the native library
 ```
-    pub global run rpi_gpio:build_lib
+    pub global run rpi_gpio:build_native
 ```
 
 [pub global activate](https://www.dartlang.org/tools/pub/cmd/pub-global.html#activating-a-package)
 makes the Dart scripts in the rpi_gpio/bin directory runnable
 from the command line.
 [pub global run](https://www.dartlang.org/tools/pub/cmd/pub-global.html#running-a-script)
-rpi_gpio:build_lib runs the [rpi_gpio/bin/build_lib.dart](bin/build_lib.dart)
-program which in turn calls the [build_lib](lib/src/native/build_lib) script
+rpi_gpio:build_native runs the [rpi_gpio/bin/build_native.dart](bin/build_native.dart)
+program which in turn calls the [build_native](lib/src/native/build_native) script
 to compile the native librpi_gpio_ext.so library for the rpi_gpio package.
 
 ## Example
