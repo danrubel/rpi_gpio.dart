@@ -6,9 +6,9 @@ import 'package:path/path.dart';
 const pkgName = 'rpi_gpio';
 const buildScriptVersion = 2;
 
-main(List<String> args) {
+void main(List<String> args) {
   // Locate the Dart SDK
-  final dartVm = File(Platform.resolvedExecutable);
+  var dartVm = File(Platform.resolvedExecutable);
   print('Dart VM... ${dartVm.path}');
 
   // Locate Dart SDK
@@ -50,8 +50,8 @@ main(List<String> args) {
 /// Parse the given content and return the version string
 String parseVersion(String pubspec) {
   var key = 'version:';
-  int start = pubspec.indexOf(key) + key.length;
-  int end = pubspec.indexOf('\n', start);
+  var start = pubspec.indexOf(key) + key.length;
+  var end = pubspec.indexOf('\n', start);
   return pubspec.substring(start, end).trim();
 }
 
@@ -67,11 +67,10 @@ void abortIf(bool condition, String message) {
 void assertNoPubListError(Map<String, dynamic> pubResult) {
   var error = pubResult['error'];
   if (error == null) {
-    Map<String, dynamic>? packages =
-        pubResult['packages'] as Map<String, dynamic>?;
+    var packages = pubResult['packages'] as Map<String, dynamic>?;
     if (packages != null) {
-      var rpiGpio = packages[pkgName];
-      if (rpiGpio != null) {
+      var pkg = packages[pkgName];
+      if (pkg != null) {
         return;
       }
       print('Cannot find $pkgName in pub list result');
@@ -87,14 +86,18 @@ void assertNoPubListError(Map<String, dynamic> pubResult) {
 }
 
 /// Assert that this script is executing on the Raspberry Pi.
-assertRunningOnRaspberryPi() {
+void assertRunningOnRaspberryPi() {
   // Check for Windows 11 running on RPi
   if (Platform.isWindows) {
+    // TODO detect typical install on RPi
     print('Running Windows... hopefully on the Raspberry Pi...');
     return;
   }
+  if (Platform.isMacOS || Platform.isIOS) {
+    print('Not running on Raspberry Pi... skipping build');
+    throw 'Aborting build';
+  }
   // Check for typical Raspbian install
   if (Directory('/home/pi').existsSync()) return;
-  print('Not running on Raspberry Pi... skipping build');
-  throw 'Aborting build';
+  print('Typical setup not found... hopefully running on the Raspberry Pi...');
 }

@@ -32,3 +32,5 @@ gcc -shared -lpthread -Wl,-soname,librpi_gpio_ext.so -o librpi_gpio_ext.so rpi_g
 
 # Copy the library
 cp librpi_gpio_ext.so ../librpi_gpio_ext.so
+
+echo "build complete"
