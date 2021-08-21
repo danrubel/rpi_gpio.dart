@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.7.2
+* another native build script fix for Windows
+
 ## 0.7.1
 * minor pubspec.yaml updates for better null-safety
 * minor build cleanup

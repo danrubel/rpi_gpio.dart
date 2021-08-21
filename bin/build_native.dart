@@ -16,12 +16,12 @@ void main(List<String> args) {
   print('Dart SDK... ${dartSdk.path}');
 
   // Locate dart_api.h
-  final headerPath = join('include', 'dart_api.h');
-  final headerFile = File.fromUri(dartSdk.uri.resolve(headerPath));
-  abortIf(!headerFile.existsSync(), 'Failed to find $headerPath');
+  final headerRelUriPath = 'include/dart_api.h';
+  final headerFile = File.fromUri(dartSdk.uri.resolve(headerRelUriPath));
+  abortIf(!headerFile.existsSync(), 'Failed to find $headerRelUriPath');
 
   // Run pub list to determine the location of the GPIO package being used
-  final pub = File.fromUri(dartSdk.uri.resolve(join('bin', 'pub')));
+  final pub = File.fromUri(dartSdk.uri.resolve('bin/pub'));
   var pubOut =
       Process.runSync(pub.path, ['list-package-dirs']).stdout as String;
   var pubResult = jsonDecode(pubOut) as Map<String, dynamic>;
