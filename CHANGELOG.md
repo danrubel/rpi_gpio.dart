@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.8.0-dev.1
+## 0.8.0
 * convert code to use dart:ffi
 * add GpioInput.allValues
 
