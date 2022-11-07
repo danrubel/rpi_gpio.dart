@@ -29,18 +29,18 @@ Future runExample(Gpio gpio, {Duration? blink, int? debounce}) async {
   pwmLed.dutyCycle = 0; // off
 
   // Get the current button state
-  final button = gpio.input(11);
+  final button = gpio.input(11, Pull.up);
   print('Button state: ${await button.value}');
 
   // Wait for the button to be pressed 3 times
-  bool lastValue = false;
+  bool lastValue = true;
   int count = 0;
   final completer = Completer();
   final subscription = button.values
       .transform(Debouncer(lastValue, debounce))
       .listen((bool newValue) {
     print('New button state: $newValue');
-    if (lastValue == true && !newValue) {
+    if (lastValue == false && newValue) {
       ++count;
       if (count == 3) {
         completer.complete();

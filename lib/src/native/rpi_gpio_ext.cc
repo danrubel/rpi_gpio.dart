@@ -1,30 +1,20 @@
-#include <errno.h>
+//#include <errno.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdlib.h>
-#include <stdio.h>
-#include <stdlib.h>
+//#include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <sys/stat.h>
+//#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
 
-#include "include/dart_api.h"
-#include "include/dart_native_api.h"
-
 #define BLOCK_SIZE 4096
 static volatile uint32_t *gpio;
 static volatile uint32_t *pwm;
 static volatile uint32_t *clk;
-
-Dart_Handle HandleError(Dart_Handle handle) {
-  if (Dart_IsError(handle)) {
-    Dart_PropagateError(handle);
-  }
-  return handle;
-}
 
 // === from wiringPi.c ===
 
@@ -165,17 +155,13 @@ void delayMicroseconds(unsigned int howLong)
 
 // === end from wiringPi.c ===
 
-// Setup GPIO mapped memory access and return zero if successful.
-// Negative return values indicate an error.
-// int _setupGpio() native "setupGpio";
-void setupGpio(Dart_NativeArguments arguments) {
-  Dart_EnterScope();
+extern "C" {
 
-  int64_t result = 0;
-  int fd = open("/dev/gpiomem", O_RDWR | O_SYNC | O_CLOEXEC);
-  if (fd < 0) {
-    result = -1;
-  } else {
+  // Setup GPIO mapped memory access and return zero if successful.
+  // Negative return values indicate an error.
+  int64_t setupGpio() {
+    int fd = open("/dev/gpiomem", O_RDWR | O_SYNC | O_CLOEXEC);
+    if (fd < 0) return -1;
 
     void *gpio_map = mmap(
       0,                      // Any adddress in our space will do
@@ -205,296 +191,137 @@ void setupGpio(Dart_NativeArguments arguments) {
     );
 
     close(fd);
-    if (gpio_map == MAP_FAILED) {
-      result = -2;
-    } else if (pwm_map == MAP_FAILED) {
-      result = -3;
-    } else if (clk_map == MAP_FAILED) {
-      result = -4;
-    } else {
-      gpio = (volatile uint32_t *) gpio_map;
-      pwm  = (volatile uint32_t *) pwm_map;
-      clk  = (volatile uint32_t *) clk_map;
+    if (gpio_map == MAP_FAILED) return -2;
+    if (pwm_map == MAP_FAILED)  return -3;
+    if (clk_map == MAP_FAILED)  return -4;
+
+    gpio = (volatile uint32_t *) gpio_map;
+    pwm  = (volatile uint32_t *) pwm_map;
+    clk  = (volatile uint32_t *) clk_map;
+    return 0;
+  }
+
+  // Dispose of GPIO mapped memory access and return zero if successful.
+  // Negative return values indicate an error.
+  int64_t disposeGpio() {
+    int gpio_result = munmap((void *) gpio, BLOCK_SIZE);
+    int pwm_result  = munmap((void *) pwm,  BLOCK_SIZE);
+    int clk_result  = munmap((void *) clk,  BLOCK_SIZE);
+
+    if (gpio_result == -1) return -12;
+    if (pwm_result == -1)  return -13;
+    if (clk_result == -1)  return -14;
+    return 0;
+  }
+
+  // Set the GPIO pin mode, where
+  //   FSEL_INPT   = input
+  //   FSEL_OUTP   = output
+  //   FSEL_ALT0   = pulse width modulation (software based?)
+  //   FSEL_ALT5   = pulse width modulation (hardware based?)
+  void setGpioMode(int bcmGpioPin, int mode) {
+    int offset = bcmGpioPin / 10;
+    int shift = (bcmGpioPin % 10) * 3;
+    *(gpio + offset) = (*(gpio + offset) & ~(7 << shift)) | ((mode & 0x7) << shift);
+  }
+
+  void pwmSetClock(int divisor) {
+    divisor &= 4095;
+    uint32_t pwm_control = *(pwm + PWM_CONTROL);  // preserve PWM_CONTROL
+
+    // Stop PWM prior to stopping PWM clock in MS mode otherwise BUSY stays high.
+
+    *(pwm + PWM_CONTROL) = 0;                     // Stop PWM
+
+    // Stop PWM clock before changing divisor. The delay after this does need to
+    // this big (95uS occasionally fails, 100uS OK), it's almost as though the BUSY
+    // flag is not working properly in balanced mode. Without the delay when DIV is
+    // adjusted the clock sometimes switches to very slow, once slow further DIV
+    // adjustments do nothing and it's difficult to get out of this mode.
+
+    *(clk + PWMCLK_CNTL) = BCM_PASSWORD | 0x01;   // Stop PWM Clock
+    delayMicroseconds (110);   // prevents clock going sloooow
+
+    while ((*(clk + PWMCLK_CNTL) & 0x80) != 0)    // Wait for clock to be !BUSY
+      delayMicroseconds (1);
+
+    *(clk + PWMCLK_DIV)  = BCM_PASSWORD | (divisor << 12);
+
+    *(clk + PWMCLK_CNTL) = BCM_PASSWORD | 0x11;   // Start PWM clock
+    *(pwm + PWM_CONTROL) = pwm_control;           // restore PWM_CONTROL
+  }
+
+  void pwmSetMode(int mode) {
+    if (mode == PWM_MODE_MS)
+      *(pwm + PWM_CONTROL) = PWM0_ENABLE | PWM1_ENABLE | PWM0_MS_MODE | PWM1_MS_MODE;
+    else
+      *(pwm + PWM_CONTROL) = PWM0_ENABLE | PWM1_ENABLE;
+  }
+
+  void pwmSetRange(unsigned int range) {
+    *(pwm + PWM0_RANGE) = range; delayMicroseconds (10);
+    *(pwm + PWM1_RANGE) = range; delayMicroseconds (10);
+  }
+
+  // Initialize a GPIO pin for input where pullUpDown is
+  //   0 = off
+  //   1 = pull down (low)
+  //   2 = pull up (high)
+  void setGpioInput(int64_t bcmGpioPin, int64_t pullUpDown) {
+    setGpioMode(bcmGpioPin, FSEL_INPT);
+
+    // 37 is GPIO up/down register, 38 and 39 are GPIO up/down set bits
+    *(gpio + 37) = pullUpDown & 3;                                   delayMicroseconds (5);
+    *(gpio + (bcmGpioPin < 32 ? 38 : 39)) = 1 << (bcmGpioPin & 31);  delayMicroseconds (5);
+
+    *(gpio + 37) = 0;                                                delayMicroseconds (5);
+    *(gpio + (bcmGpioPin < 32 ? 38 : 39)) = 0;                       delayMicroseconds (5);
+  }
+
+  // Initialize a GPIO pin for output.
+  void setGpioOutput(int64_t bcmGpioPin) {
+    setGpioMode(bcmGpioPin, FSEL_OUTP);
+  }
+
+  // Initialize a GPIO pin for pulse width modulated output.
+  void setGpioPwmOutput(int64_t bcmGpioPin) {
+    uint8_t pwmAlt = gpioToPwmALT[bcmGpioPin];
+    if (pwmAlt != 0) {
+      // From http://what-when-how.com/Tutorial/topic-535dm28c/Smart-Home-Automation-with-Linux-and-Raspberry-Pi-303.html
+
+      *(pwm + PWM_CONTROL) = 0;                             // off
+
+  // ********************
+  //  Uncommenting pwmSetRange causes the RPi to lockup or go very sloooooooooowly
+  // ********************
+  //    pwmSetRange(1024);                                   // Default range of 1024
+  //    *(pwm + PWM0_RANGE) = 1024;
+
+      pwmSetClock(32);                                     // 19.2 / 32 = 600KHz - Also starts the PWM
+
+      setGpioMode(bcmGpioPin, pwmAlt);                     // turn on PWM for pin
+      delayMicroseconds(110);                              // See comments in pwmSetClock
+
+  //    pwmSetMode(PWM_MODE_BAL);                             // Pi default mode
+      *(pwm + PWM_CONTROL) = PWM0_ENABLE;                  // Pi default mode
+  //    *(pwm + PWM_CONTROL) = PWM0_ENABLE | PWM1_ENABLE;    // Pi default mode
     }
   }
 
-  Dart_SetIntegerReturnValue(arguments, result);
-  Dart_ExitScope();
-}
-
-// Dispose of GPIO mapped memory access and return zero if successful.
-// Negative return values indicate an error.
-// int _disposeGpio() native "disposeGpio";
-void disposeGpio(Dart_NativeArguments arguments) {
-  Dart_EnterScope();
-
-  int gpio_result = munmap((void *) gpio, BLOCK_SIZE);
-  int pwm_result  = munmap((void *) pwm,  BLOCK_SIZE);
-  int clk_result  = munmap((void *) clk,  BLOCK_SIZE);
-
-  int64_t result = 0;
-  if (gpio_result == -1) {
-    result = -2;
-  } else if (pwm_result == -1) {
-    result = -3;
-  } else if (clk_result == -1) {
-    result = -4;
+  // Read the input voltage on a GPIO pin and return either true (high) or false (low).
+  int64_t readGpio(int64_t bcmGpioPin) {
+    // 13 and 14 are GPIO input bits
+    return (*(gpio + (bcmGpioPin < 32 ? 13 : 14)) & (1 << (bcmGpioPin & 31)));
   }
 
-  Dart_SetIntegerReturnValue(arguments, result);
-  Dart_ExitScope();
-}
-
-// Set the GPIO pin mode, where
-//   FSEL_INPT   = input
-//   FSEL_OUTP   = output
-//   FSEL_ALT0   = pulse width modulation (software based?)
-//   FSEL_ALT5   = pulse width modulation (hardware based?)
-void setGpioMode(int bcmGpioPin, int mode) {
-  int offset = bcmGpioPin / 10;
-  int shift = (bcmGpioPin % 10) * 3;
-  *(gpio + offset) = (*(gpio + offset) & ~(7 << shift)) | ((mode & 0x7) << shift);
-}
-
-void pwmSetClock(int divisor) {
-  divisor &= 4095;
-  uint32_t pwm_control = *(pwm + PWM_CONTROL);  // preserve PWM_CONTROL
-
-  // Stop PWM prior to stopping PWM clock in MS mode otherwise BUSY stays high.
-
-  *(pwm + PWM_CONTROL) = 0;                     // Stop PWM
-
-  // Stop PWM clock before changing divisor. The delay after this does need to
-  // this big (95uS occasionally fails, 100uS OK), it's almost as though the BUSY
-  // flag is not working properly in balanced mode. Without the delay when DIV is
-  // adjusted the clock sometimes switches to very slow, once slow further DIV
-  // adjustments do nothing and it's difficult to get out of this mode.
-
-  *(clk + PWMCLK_CNTL) = BCM_PASSWORD | 0x01;   // Stop PWM Clock
-  delayMicroseconds (110);   // prevents clock going sloooow
-
-  while ((*(clk + PWMCLK_CNTL) & 0x80) != 0)    // Wait for clock to be !BUSY
-    delayMicroseconds (1);
-
-  *(clk + PWMCLK_DIV)  = BCM_PASSWORD | (divisor << 12);
-
-  *(clk + PWMCLK_CNTL) = BCM_PASSWORD | 0x11;   // Start PWM clock
-  *(pwm + PWM_CONTROL) = pwm_control;           // restore PWM_CONTROL
-}
-
-void pwmSetMode(int mode) {
-  if (mode == PWM_MODE_MS)
-    *(pwm + PWM_CONTROL) = PWM0_ENABLE | PWM1_ENABLE | PWM0_MS_MODE | PWM1_MS_MODE;
-  else
-    *(pwm + PWM_CONTROL) = PWM0_ENABLE | PWM1_ENABLE;
-}
-
-void pwmSetRange(unsigned int range) {
-  *(pwm + PWM0_RANGE) = range; delayMicroseconds (10);
-  *(pwm + PWM1_RANGE) = range; delayMicroseconds (10);
-}
-
-// Initialize a GPIO pin for input where pullUpDown is
-//   0 = off
-//   1 = pull down (low)
-//   2 = pull up (high)
-// void _setGpioInput(int bcmGpioPin, int pullUpDown) native "setGpioInput";
-void setGpioInput(Dart_NativeArguments arguments) {
-  Dart_EnterScope();
-  Dart_Handle arg1 = HandleError(Dart_GetNativeArgument(arguments, 1));
-  Dart_Handle arg2 = HandleError(Dart_GetNativeArgument(arguments, 2));
-
-  int64_t bcmGpioPin;
-  int64_t pullUpDown;
-  HandleError(Dart_IntegerToInt64(arg1, &bcmGpioPin));
-  HandleError(Dart_IntegerToInt64(arg2, &pullUpDown));
-
-  setGpioMode(bcmGpioPin, FSEL_INPT);
-
-  // 37 is GPIO up/down register, 38 and 39 are GPIO up/down set bits
-  *(gpio + 37) = pullUpDown & 3;                                   delayMicroseconds (5);
-  *(gpio + (bcmGpioPin < 32 ? 38 : 39)) = 1 << (bcmGpioPin & 31);  delayMicroseconds (5);
-
-  *(gpio + 37) = 0;                                                delayMicroseconds (5);
-  *(gpio + (bcmGpioPin < 32 ? 38 : 39)) = 0;                       delayMicroseconds (5);
-
-  Dart_ExitScope();
-}
-
-// Initialize a GPIO pin for output.
-// void _setGpioOutput(int bcmGpioPin) native "setGpioOutput";
-void setGpioOutput(Dart_NativeArguments arguments) {
-  Dart_EnterScope();
-  Dart_Handle arg1 = HandleError(Dart_GetNativeArgument(arguments, 1));
-
-  int64_t bcmGpioPin;
-  HandleError(Dart_IntegerToInt64(arg1, &bcmGpioPin));
-
-  setGpioMode(bcmGpioPin, FSEL_OUTP);
-
-  Dart_ExitScope();
-}
-
-// Initialize a GPIO pin for pulse width modulated output.
-// void _setGpioPwmOutput(int bcmGpioPin) native "setGpioPwmOutput";
-void setGpioPwmOutput(Dart_NativeArguments arguments) {
-  Dart_EnterScope();
-  Dart_Handle arg1 = HandleError(Dart_GetNativeArgument(arguments, 1));
-
-  int64_t bcmGpioPin;
-  HandleError(Dart_IntegerToInt64(arg1, &bcmGpioPin));
-
-  uint8_t pwmAlt = gpioToPwmALT[bcmGpioPin];
-  if (pwmAlt != 0) {
-    // From http://what-when-how.com/Tutorial/topic-535dm28c/Smart-Home-Automation-with-Linux-and-Raspberry-Pi-303.html
-
-    *(pwm + PWM_CONTROL) = 0;                             // off
-
-// ********************
-//  Uncommenting pwmSetRange causes the RPi to lockup or go very sloooooooooowly
-// ********************
-//    pwmSetRange(1024);                                   // Default range of 1024
-//    *(pwm + PWM0_RANGE) = 1024;
-
-    pwmSetClock(32);                                     // 19.2 / 32 = 600KHz - Also starts the PWM
-
-    setGpioMode(bcmGpioPin, pwmAlt);                     // turn on PWM for pin
-    delayMicroseconds(110);                              // See comments in pwmSetClock
-
-//    pwmSetMode(PWM_MODE_BAL);                             // Pi default mode
-    *(pwm + PWM_CONTROL) = PWM0_ENABLE;                  // Pi default mode
-//    *(pwm + PWM_CONTROL) = PWM0_ENABLE | PWM1_ENABLE;    // Pi default mode
+  // Set the output voltage on a GPIO pin to high (true, non-zero) or low (false, zero).
+  void writeGpio(int64_t bcmGpioPin, int64_t newValue) {
+    // 7 and 8 are set GPIO output HIGH bits, 10 and 11 are set GPIO output LOW bits.
+    *(gpio + (newValue != 0 ? 7 : 10) + (bcmGpioPin < 32 ? 0 : 1)) = 1 << (bcmGpioPin & 31);
   }
 
-  Dart_ExitScope();
-}
-
-// Read the input voltage on a GPIO pin and return either true (high) or false (low).
-// bool _readGpio(int bcmGpioPin) native "readGpio";
-void readGpio(Dart_NativeArguments arguments) {
-  Dart_EnterScope();
-  Dart_Handle arg1 = HandleError(Dart_GetNativeArgument(arguments, 1));
-
-  int64_t bcmGpioPin;
-  HandleError(Dart_IntegerToInt64(arg1, &bcmGpioPin));
-
-  // 13 and 14 are GPIO input bits
-  bool value = (*(gpio + (bcmGpioPin < 32 ? 13 : 14)) & (1 << (bcmGpioPin & 31))) != 0;
-
-  Dart_SetBooleanReturnValue(arguments, value);
-  Dart_ExitScope();
-}
-
-// Set the output voltage on a GPIO pin to high (true) or low (false).
-// void _writeGpio(int bcmGpioPin, bool newValue) native "writeGpio";
-void writeGpio(Dart_NativeArguments arguments) {
-  Dart_EnterScope();
-  Dart_Handle arg1 = HandleError(Dart_GetNativeArgument(arguments, 1));
-  Dart_Handle arg2 = HandleError(Dart_GetNativeArgument(arguments, 2));
-
-  int64_t bcmGpioPin;
-  bool newValue;
-  HandleError(Dart_IntegerToInt64(arg1, &bcmGpioPin));
-  HandleError(Dart_BooleanValue(arg2, &newValue));
-
-  // 7 and 8 are set GPIO output HIGH bits, 10 and 11 are set GPIO output LOW bits.
-  *(gpio + (newValue ? 7 : 10) + (bcmGpioPin < 32 ? 0 : 1)) = 1 << (bcmGpioPin & 31);
-
-  Dart_ExitScope();
-}
-
-// Set the pulse width modulated output to a value between 0 (off) and 1024 (on).
-// void _writePwmGpio(int bcmGpioPin, int newValue) native "writePwmGpio";
-void writePwmGpio(Dart_NativeArguments arguments) {
-  Dart_EnterScope();
-  Dart_Handle arg1 = HandleError(Dart_GetNativeArgument(arguments, 1));
-  Dart_Handle arg2 = HandleError(Dart_GetNativeArgument(arguments, 2));
-
-  int64_t bcmGpioPin;
-  int64_t newValue;
-  HandleError(Dart_IntegerToInt64(arg1, &bcmGpioPin));
-  HandleError(Dart_IntegerToInt64(arg2, &newValue));
-
-  *(pwm + gpioToPwmPort[bcmGpioPin]) = newValue;
-
-  Dart_ExitScope();
-}
-
-// ===== Infrastructure methods ===============================================
-
-struct FunctionLookup {
-  const char* name;
-  Dart_NativeFunction function;
-};
-
-FunctionLookup function_list[] = {
-  {"disposeGpio", disposeGpio},
-  {"readGpio", readGpio},
-  {"setGpioInput", setGpioInput},
-  {"setGpioOutput", setGpioOutput},
-  {"setGpioPwmOutput", setGpioPwmOutput},
-  {"setupGpio", setupGpio},
-  {"writeGpio", writeGpio},
-  {"writePwmGpio", writePwmGpio},
-  {NULL, NULL}
-};
-
-FunctionLookup no_scope_function_list[] = {
-  {NULL, NULL}
-};
-
-// Resolve the Dart name of the native function into a C function pointer.
-// This is called once per native method.
-Dart_NativeFunction ResolveName(Dart_Handle name,
-                                int argc,
-                                bool* auto_setup_scope) {
-  if (!Dart_IsString(name)) {
-    return NULL;
+  // Set the pulse width modulated output to a value between 0 (off) and 1024 (on).
+  void writePwmGpio(int64_t bcmGpioPin, int64_t newValue) {
+    *(pwm + gpioToPwmPort[bcmGpioPin]) = newValue;
   }
-  Dart_NativeFunction result = NULL;
-  if (auto_setup_scope == NULL) {
-    return NULL;
-  }
-
-  Dart_EnterScope();
-  const char* cname;
-  HandleError(Dart_StringToCString(name, &cname));
-
-  for (int i=0; function_list[i].name != NULL; ++i) {
-    if (strcmp(function_list[i].name, cname) == 0) {
-      *auto_setup_scope = true;
-      result = function_list[i].function;
-      break;
-    }
-  }
-
-  if (result != NULL) {
-    Dart_ExitScope();
-    return result;
-  }
-
-  for (int i=0; no_scope_function_list[i].name != NULL; ++i) {
-    if (strcmp(no_scope_function_list[i].name, cname) == 0) {
-      *auto_setup_scope = false;
-      result = no_scope_function_list[i].function;
-      break;
-    }
-  }
-
-  Dart_ExitScope();
-  return result;
-}
-
-// Initialize the native library.
-// This is called once when the native library is loaded.
-DART_EXPORT Dart_Handle rpi_gpio_ext_Init(Dart_Handle parent_library) {
-  if (Dart_IsError(parent_library)) {
-    return parent_library;
-  }
-  Dart_Handle result_code =
-      Dart_SetNativeResolver(parent_library, ResolveName, NULL);
-  if (Dart_IsError(result_code)) {
-    return result_code;
-  }
-  return Dart_Null();
 }

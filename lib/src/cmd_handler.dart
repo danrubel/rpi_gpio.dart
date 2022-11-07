@@ -10,7 +10,7 @@ class RpiGpioCmdHandler implements comm.CommandHandler {
   final RpiGpioLib gpioLib;
 
   RpiGpioCmdHandler(this.sendPort, this.gpioLib) {
-    int result = gpioLib.setupGpio();
+    var result = gpioLib.setupGpio();
     if (result != 0) throw GpioException('Init Gpio failed: $result');
   }
 
@@ -68,7 +68,7 @@ class RpiGpioCmdHandler implements comm.CommandHandler {
   void disposeCmd() {
     stopPwm();
     stopPollingTimer();
-    int result = gpioLib.disposeGpio();
+    var result = gpioLib.disposeGpio();
     if (result != 0) throw GpioException('RpiGpio dispose failed: $result');
     sendPort.send(comm.disposeCompleteRsp());
   }
@@ -82,7 +82,6 @@ class RpiGpioCmdHandler implements comm.CommandHandler {
 class RpiPolledNode extends PolledNode {
   final RpiGpioLib gpioLib;
   final SendPort sendPort;
-  bool? lastValue;
 
   RpiPolledNode(this.gpioLib, this.sendPort, int bcmGpioPin)
       : super(bcmGpioPin);
@@ -90,10 +89,7 @@ class RpiPolledNode extends PolledNode {
   @override
   void poll() {
     var currentValue = gpioLib.readGpio(bcmGpioPin);
-    if (lastValue != currentValue) {
-      lastValue = currentValue;
-      sendPort.send(comm.polledValueRsp(bcmGpioPin, currentValue));
-    }
+    sendPort.send(comm.polledValueRsp(bcmGpioPin, currentValue));
   }
 }
 

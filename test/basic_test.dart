@@ -8,7 +8,7 @@ import 'package:test/test.dart';
 import 'mock_isolate.dart';
 import 'test_util.dart';
 
-main() {
+void main() {
   test('const', () {
     expect(Pull.off.index, 0);
     expect(Pull.down.index, 1);
@@ -28,6 +28,43 @@ main() {
       isolateEntryPoint: isolateMockMain,
       testSendPort: receivePort!.sendPort,
     );
+  });
+
+  test('values from allValues', () async {
+    var gpioInput = GpioInput_allValues_Mock();
+    Completer<bool>? completer;
+
+    Future<void> expectValue(bool newValue) async {
+      completer = Completer();
+      gpioInput.valuesController.add(newValue);
+      var actualValue = await completer!.future.timeout(const Duration(milliseconds: 250));
+      expect(actualValue, newValue, reason: 'expected a new stream value');
+    }
+
+    Future<void> expectNoValue(bool newValue) async {
+      completer = Completer();
+      gpioInput.valuesController.add(newValue);
+      var timeoutOccurred = false;
+      await completer!.future.timeout(const Duration(milliseconds: 10), onTimeout: () {
+        timeoutOccurred = true;
+        return false;
+      });
+      expect(timeoutOccurred, true, reason: 'did not expect a new stream value');
+    }
+
+    var subscription = gpioInput.values.listen((value) {
+      completer!.complete(value);
+    });
+    try {
+      await expectValue(true);
+      await expectValue(false);
+      await expectNoValue(false);
+      await expectNoValue(false);
+      await expectValue(true);
+      await expectNoValue(true);
+    } finally {
+      await subscription.cancel();
+    }
   });
 
   test('exceptions', () async {
@@ -83,4 +120,14 @@ main() {
     receivePort = null;
     subscription = null;
   });
+}
+
+class GpioInput_allValues_Mock extends GpioInput {
+  final StreamController<bool> valuesController = StreamController<bool>();
+
+  @override
+  Stream<bool> get allValues => valuesController.stream;
+
+  @override
+  Future<bool> get value => throw UnimplementedError();
 }

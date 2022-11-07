@@ -231,10 +231,11 @@ class RpiGpioInput extends _RpiGpioCommon with GpioInput {
   }
 
   @override
-  Stream<bool> get values {
+  Stream<bool> get allValues {
     if (_valuesController != null) {
       throw GpioException(
-          'cancel existing values stream before calling values again',
+          'cancel existing values or allValues stream'
+          ' before calling values or allValues again',
           physicalPin);
     }
     _valuesController = StreamController(onListen: () {

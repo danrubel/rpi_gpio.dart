@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0-dev.1
+* convert code to use dart:ffi
+* add GpioInput.allValues
+
 ## 0.7.2
 * another native build script fix for Windows
 

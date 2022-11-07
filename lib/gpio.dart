@@ -53,7 +53,39 @@ abstract class GpioInput {
 
   /// When the value of the input changes,
   /// the new value is appended to the returned stream.
-  Stream<bool> get values;
+  Stream<bool> get values =>
+      allValues.transform<bool>(_ChangedValueTransformer<bool>());
+
+  /// Return a stream of all input values
+  /// regardless whether the new value is different than the previous value.
+  Stream<bool> get allValues;
+}
+
+/// Transform a sequence of values into a sequence of changing value
+class _ChangedValueTransformer<T> extends StreamTransformerBase<T, T> {
+  StreamController<T>? _controller;
+  T? lastValue;
+
+  @override
+  Stream<T> bind(Stream<T> stream) {
+    if (_controller != null) throw 'cannout use $runtimeType twice';
+    late StreamSubscription<T> subscription;
+    _controller = StreamController<T>(onListen: () {
+      subscription = stream.listen((T newValue) {
+        if (newValue != lastValue) {
+          _controller!.add(newValue);
+          lastValue = newValue;
+        }
+      });
+    }, onCancel: () {
+      subscription.cancel();
+    });
+    return _controller!.stream;
+  }
+
+  @override
+  StreamTransformer<RS, RT> cast<RS, RT>() =>
+      StreamTransformer.castFrom<T, T, RS, RT>(this);
 }
 
 /// A GPIO output pin.
