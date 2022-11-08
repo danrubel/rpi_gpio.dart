@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.8.1
+* add `platforms` to pubspec indicating only Linux is supported
+
 ## 0.8.0
 * convert code to use dart:ffi
 * add GpioInput.allValues
