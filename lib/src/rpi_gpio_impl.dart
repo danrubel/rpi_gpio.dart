@@ -22,6 +22,7 @@ class RpiGpio extends Gpio {
     bool i2c = true,
     bool spi = true,
     bool eeprom = true,
+    bool uart = true,
     Completer<GpioException>? onError,
     required Function(SendPort sendPort) isolateEntryPoint,
     SendPort? testSendPort,
@@ -30,7 +31,8 @@ class RpiGpio extends Gpio {
     _instantiatedGpio = true;
 
     const timeout = Duration(seconds: 30);
-    final rpiGpio = RpiGpio._(onError, i2c: i2c, spi: spi, eeprom: eeprom);
+    final rpiGpio =
+        RpiGpio._(onError, i2c: i2c, spi: spi, eeprom: eeprom, uart: uart);
     final receivePort = ReceivePort();
     final onErrorPort = ReceivePort();
 
@@ -68,10 +70,12 @@ class RpiGpio extends Gpio {
     required bool i2c,
     required bool spi,
     required bool eeprom,
+    required bool uart,
   }) {
     if (i2c) physI2CPins.forEach(allocatePin);
     if (spi) physSpiPins.forEach(allocatePin);
     if (eeprom) physEepromPins.forEach(allocatePin);
+    if (uart) physUartPins.forEach(allocatePin);
   }
 
   @override
@@ -184,14 +188,20 @@ class _RpiGpioResponseHandler implements comm.ResponseHandler {
   }
 
   @override
+  void setInputRsp(int result) {
+    // print('setInputRsp response: $result');
+  }
+
+  @override
   void unknownRsp(data) {
     print('RpiGpio unknown response: $data');
   }
 
   /// Handle an error from the isolate
   void onError(message) {
-    if (message is List && message.length == 2)
+    if (message is List && message.length == 2) {
       message = 'Isolate Exception: ${message[0]}\n${message[1]}\nMain Thread:';
+    }
     var error = GpioException('$message');
     if (!initCompleter.isCompleted) {
       initCompleter.completeError(error);

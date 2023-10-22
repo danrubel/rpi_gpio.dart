@@ -37,7 +37,8 @@ void main() {
     Future<void> expectValue(bool newValue) async {
       completer = Completer();
       gpioInput.valuesController.add(newValue);
-      var actualValue = await completer!.future.timeout(const Duration(milliseconds: 250));
+      var actualValue =
+          await completer!.future.timeout(const Duration(milliseconds: 250));
       expect(actualValue, newValue, reason: 'expected a new stream value');
     }
 
@@ -45,11 +46,13 @@ void main() {
       completer = Completer();
       gpioInput.valuesController.add(newValue);
       var timeoutOccurred = false;
-      await completer!.future.timeout(const Duration(milliseconds: 10), onTimeout: () {
+      await completer!.future.timeout(const Duration(milliseconds: 10),
+          onTimeout: () {
         timeoutOccurred = true;
         return false;
       });
-      expect(timeoutOccurred, true, reason: 'did not expect a new stream value');
+      expect(timeoutOccurred, true,
+          reason: 'did not expect a new stream value');
     }
 
     var subscription = gpioInput.values.listen((value) {
@@ -122,6 +125,7 @@ void main() {
   });
 }
 
+// ignore: camel_case_types
 class GpioInput_allValues_Mock extends GpioInput {
   final StreamController<bool> valuesController = StreamController<bool>();
 

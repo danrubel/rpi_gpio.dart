@@ -6,7 +6,7 @@ import 'package:test/test.dart';
 /// Shared GPIO instance
 Gpio? gpio;
 
-expectThrows(f()) {
+void expectThrows(Function() f) {
   try {
     f();
     fail('expected exception');

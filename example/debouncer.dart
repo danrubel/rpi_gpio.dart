@@ -33,6 +33,7 @@ class Debouncer implements StreamTransformerBase<bool, bool> {
     return _controller!.stream;
   }
 
+  @override
   StreamTransformer<RS, RT> cast<RS, RT>() =>
       StreamTransformer.castFrom<bool, bool, RS, RT>(this);
 }

@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:isolate';
 
+import 'package:rpi_gpio/rpi_gpio.dart';
 import 'package:rpi_gpio/src/cmd_handler.dart';
 import 'package:rpi_gpio/src/rpi_gpio_comm.dart' as comm;
 
@@ -28,34 +30,41 @@ class MockGpioLibImpl implements RpiGpioLib {
   SendPort? testSendPort;
   final gpioInputValues = <int, bool>{};
 
+  @override
   int setupGpio() {
     if (setupComplete) throw 'setup already called';
     setupComplete = true;
     return 0;
   }
 
+  @override
   int disposeGpio() {
     if (disposed) throw 'dispose already called';
     testSendPort!.send([disposeAck]);
     return 0;
   }
 
-  void setGpioInput(int bcmGpioPin, int pullUpDown) {
+  @override
+  int setGpioInput(int bcmGpioPin, int pullUpDown) {
     _checkSetup();
     testSendPort!.send([setInputAck, bcmGpioPin, pullUpDown]);
+    return 37; // something random
   }
 
+  @override
   bool readGpio(int bcmGpioPin) {
     _checkSetup();
     testSendPort!.send([readAck, bcmGpioPin]);
     return gpioInputValues[bcmGpioPin] ?? false;
   }
 
+  @override
   void setGpioOutput(int bcmGpioPin) {
     _checkSetup();
     testSendPort!.send([setOutputAck, bcmGpioPin]);
   }
 
+  @override
   void writeGpio(int bcmGpioPin, bool newValue) {
     _checkSetup();
     testSendPort!.send([writeAck, bcmGpioPin, newValue]);
@@ -79,5 +88,33 @@ class MockGpioLibImpl implements RpiGpioLib {
   void _checkSetup() {
     if (!setupComplete) throw 'must call setup first';
     if (disposed) throw 'already disposed';
+  }
+}
+
+class BaseAckHandler {
+  RpiGpio? gpio;
+  final receivePort = ReceivePort('test gpio ack handler');
+  late StreamSubscription subscription;
+
+  final isSetup = Completer();
+  final isDisposed = Completer();
+  final unexpectedAck = [];
+
+  BaseAckHandler() {
+    subscription = receivePort.listen((ack) {
+      handleAck(ack as List);
+    });
+  }
+
+  void handleAck(List ack) {
+    switch (ack[0] as int) {
+      case setupAck:
+        isSetup.complete();
+        return;
+      case disposeAck:
+        isDisposed.complete();
+        return;
+    }
+    unexpectedAck.add(ack);
   }
 }

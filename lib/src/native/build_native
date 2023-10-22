@@ -19,10 +19,7 @@ g++ -fPIC -c rpi_gpio_ext.cc
 # use --no-undefined to check for missing libraries
 gcc -shared -lpthread -Wl,-soname,librpi_gpio_ext.so -o librpi_gpio_ext.so rpi_gpio_ext.o
 
-# Copy the library
-cp librpi_gpio_ext.so ../librpi_gpio_ext.so
-
 # echo "exported symbols"
-# nm -g ../librpi_gpio_ext.so | grep ' T '
+# nm -g librpi_gpio_ext.so | grep ' T '
 
 echo "gcc build complete"

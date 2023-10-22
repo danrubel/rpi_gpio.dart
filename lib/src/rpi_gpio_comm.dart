@@ -17,20 +17,22 @@ const _setPwmCmd = 7;
 const _testCmd = 8;
 const _disposeCmd = 9;
 
-setInputCmd(int bcmGpioPin, Pull pull) =>
+List<int> setInputCmd(int bcmGpioPin, Pull pull) =>
     [_setInputCmd, bcmGpioPin, pull.index];
-readCmd(int bcmGpioPin) => [_readCmd, bcmGpioPin];
-setPollingFrequencyCmd(Duration frequency) =>
+List<int> readCmd(int bcmGpioPin) => [_readCmd, bcmGpioPin];
+List<int> setPollingFrequencyCmd(Duration frequency) =>
     [_setPollingFrequencyCmd, frequency.inMilliseconds];
-startPollingCmd(int bcmGpioPin) => [_startPollingCmd, bcmGpioPin];
-stopPollingCmd(int bcmGpioPin) => [_stopPollingCmd, bcmGpioPin];
+List<int> startPollingCmd(int bcmGpioPin) => [_startPollingCmd, bcmGpioPin];
+List<int> stopPollingCmd(int bcmGpioPin) => [_stopPollingCmd, bcmGpioPin];
 
-setOutputCmd(int bcmGpioPin) => [_setOutputCmd, bcmGpioPin];
-writeCmd(int bcmGpioPin, bool newValue) => [_writeCmd, bcmGpioPin, newValue];
-setPwmCmd(int bcmGpioPin, int dutyCycle) => [_setPwmCmd, bcmGpioPin, dutyCycle];
+List<int> setOutputCmd(int bcmGpioPin) => [_setOutputCmd, bcmGpioPin];
+List<Object> writeCmd(int bcmGpioPin, bool newValue) =>
+    [_writeCmd, bcmGpioPin, newValue];
+List<int> setPwmCmd(int bcmGpioPin, int dutyCycle) =>
+    [_setPwmCmd, bcmGpioPin, dutyCycle];
 
-testCmd(data) => [_testCmd, data];
-disposeCmd() => [_disposeCmd];
+List testCmd(data) => [_testCmd, data];
+List<int> disposeCmd() => [_disposeCmd];
 
 void dispatchCmd(data, CommandHandler handler) {
   if (data is List && data.isNotEmpty) {
@@ -94,12 +96,14 @@ const _initCompleteRsp = 0;
 const _readRsp = 1;
 const _polledValueRsp = 2;
 const _disposeCompleteRsp = 3;
+const _setInputRsp = 4;
 
-initCompleteRsp(SendPort sendPort) => [_initCompleteRsp, sendPort];
-readRsp(bool value) => [_readRsp, value];
-polledValueRsp(int bcmGpioPin, bool currentValue) =>
+List<Object> initCompleteRsp(SendPort sendPort) => [_initCompleteRsp, sendPort];
+List<Object> readRsp(bool value) => [_readRsp, value];
+List<Object> setInputRsp(int result) => [_setInputRsp, result];
+List<Object> polledValueRsp(int bcmGpioPin, bool currentValue) =>
     [_polledValueRsp, bcmGpioPin, currentValue];
-disposeCompleteRsp() => [_disposeCompleteRsp];
+List<int> disposeCompleteRsp() => [_disposeCompleteRsp];
 
 void dispatchRsp(data, ResponseHandler handler) {
   if (data is List && data.isNotEmpty) {
@@ -118,6 +122,9 @@ void dispatchRsp(data, ResponseHandler handler) {
         case _disposeCompleteRsp:
           handler.disposeCompleteRsp();
           return;
+        case _setInputRsp:
+          handler.setInputRsp(data[1] as int);
+          return;
       }
     }
   }
@@ -129,5 +136,6 @@ abstract class ResponseHandler {
   void readRsp(bool newValue);
   void polledValueRsp(int bcmGpioPin, bool currentValue);
   void disposeCompleteRsp();
+  void setInputRsp(int data);
   void unknownRsp(data);
 }

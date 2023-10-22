@@ -46,10 +46,11 @@ PwmNode? removePwmNode(int bcmGpioPin) {
   PwmNode? node = firstPwmNode;
   while (node != null) {
     if (node.bcmGpioPin == bcmGpioPin) {
-      if (previousNode == null)
+      if (previousNode == null) {
         firstPwmNode = node.nextNode;
-      else
+      } else {
         previousNode.nextNode = node.nextNode;
+      }
       break;
     }
     previousNode = node;

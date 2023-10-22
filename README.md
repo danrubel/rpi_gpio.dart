@@ -41,9 +41,17 @@ rpi_gpio:build_native runs the [rpi_gpio/bin/build_native.dart](bin/build_native
 program which in turn calls the [build_native](lib/src/native/build_native) script
 to compile the native librpi_gpio_ext.so library for the rpi_gpio package.
 
+**Alternately**, if you checked out `rpi_gpio` into it's own directory
+and are modifying it or referencing it from a different `pubspec.yaml` using a relative path,
+then you can skip #1 and #2 above, and just run
+```
+    cd /to/your/local/rpi_gpio
+    dart bin/build_native.dart
+```
+
 ## Example
 
-The [example](example/example.dart) launches the [example app](example/exampleApp.dart)
+The [example](example/example.dart) launches the [example app](example/example_app.dart)
 to demonstrate:
 
  * Blinking an LED along with software based PWM on a second LED.

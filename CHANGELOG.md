@@ -1,14 +1,27 @@
 # Changelog
 
+## 0.9.1
+* BREAKING: Uart pins are reserved unless `uart: false` is passed when gpio is initialized
+* Fix GPIO input pull up/down on RPi 4
+* More examples
+
+## 0.9.0
+* update pubspec to require Dart 2.18
+* extract and generate native library API
+* convert from pedantic to lints package
+
 ## 0.8.1
 * add `platforms` to pubspec indicating only Linux is supported
+* tested on RPi 4 with Dart 2.12, 2.13, 2.18
 
 ## 0.8.0
 * convert code to use dart:ffi
 * add GpioInput.allValues
+* tested on RPi 4 with Dart 2.12, 2.13, 2.18
 
 ## 0.7.2
 * another native build script fix for Windows
+* tested on RPi 4 with Dart 2.12
 
 ## 0.7.1
 * minor pubspec.yaml updates for better null-safety

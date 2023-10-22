@@ -1,6 +1,6 @@
 import 'package:rpi_gpio/rpi_gpio.dart';
 
-import 'example_app.dart';
+import 'output_all_app.dart';
 
 /// Launch the example by injecting an instance of [RpiGpio].
 /// This only works on the Raspberry Pi.
@@ -9,6 +9,7 @@ import 'example_app.dart';
 /// so that it does not reference the [RpiGpio] native libary
 /// and thus can be tested with a mock [Gpio] on any platform.
 void main() async {
-  final gpio = await initialize_RpiGpio();
-  await runExample(gpio);
+  final gpio = await initialize_RpiGpio(
+      i2c: false, spi: false, eeprom: false, uart: false);
+  await runAllOutput(gpio);
 }

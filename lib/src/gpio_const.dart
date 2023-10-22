@@ -57,3 +57,8 @@ const physEepromPins = <int>[
   27, // Reserved
   28, // Reserved
 ];
+
+const physUartPins = <int>[
+  8, // Uart Tx
+  10, // Uart Rx
+];

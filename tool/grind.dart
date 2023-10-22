@@ -5,7 +5,7 @@ import 'package:grinder/grinder.dart';
 
 import '../test/test_util.dart';
 
-main(List<String> args) => grind(args);
+Future main(List<String> args) => grind(args);
 
 @Task()
 void analyze() {
@@ -14,7 +14,7 @@ void analyze() {
 
 @DefaultTask()
 @Depends(analyze, test, coverage)
-void buildbot() => null;
+void buildbot() {}
 
 @Task('Gather and send coverage data.')
 void coverage() {
@@ -39,7 +39,6 @@ void coverage() {
 Future test() async {
   print(Directory.current);
   if (isRaspberryPi) {
-    // ignore: unawaited_futures
-    TestRunner().testAsync(files: 'test/all.dart');
+    unawaited(TestRunner().testAsync(files: 'test/all.dart'));
   }
 }

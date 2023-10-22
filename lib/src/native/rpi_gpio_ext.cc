@@ -17,6 +17,7 @@ static volatile uint32_t *pwm;
 static volatile uint32_t *clk;
 
 // === from wiringPi.c ===
+// === and RPi.GPIO python module ===
 
 // To prevent accidental writes to critical control registers,
 // values written must be ORed with 0x5A000000.
@@ -64,6 +65,16 @@ static volatile uint32_t *clk;
 #define PWM0_DATA   5
 #define PWM1_RANGE  8
 #define PWM1_DATA   9
+
+//        Pull up/down offsets
+
+#define PULLUPDN_OFFSET             37  // 0x0094 / 4
+#define PULLUPDNCLK_OFFSET          38  // 0x0098 / 4
+
+#define PULLUPDN_OFFSET_2711_0      57
+#define PULLUPDN_OFFSET_2711_1      58
+#define PULLUPDN_OFFSET_2711_2      59
+#define PULLUPDN_OFFSET_2711_3      60
 
 //        Clock regsiter offsets
 
@@ -155,6 +166,55 @@ void delayMicroseconds(unsigned int howLong)
 
 // === end from wiringPi.c ===
 
+// Set the GPIO pin mode, where
+//   FSEL_INPT   = input
+//   FSEL_OUTP   = output
+//   FSEL_ALT0   = pulse width modulation (software based?)
+//   FSEL_ALT5   = pulse width modulation (hardware based?)
+void setGpioMode(int bcmGpioPin, int mode) {
+  int offset = bcmGpioPin / 10;
+  int shift = (bcmGpioPin % 10) * 3;
+  *(gpio + offset) = (*(gpio + offset) & ~(7 << shift)) | ((mode & 0x7) << shift);
+}
+
+void pwmSetClock(int divisor) {
+  divisor &= 4095;
+  uint32_t pwm_control = *(pwm + PWM_CONTROL);  // preserve PWM_CONTROL
+
+  // Stop PWM prior to stopping PWM clock in MS mode otherwise BUSY stays high.
+
+  *(pwm + PWM_CONTROL) = 0;                     // Stop PWM
+
+  // Stop PWM clock before changing divisor. The delay after this does need to
+  // this big (95uS occasionally fails, 100uS OK), it's almost as though the BUSY
+  // flag is not working properly in balanced mode. Without the delay when DIV is
+  // adjusted the clock sometimes switches to very slow, once slow further DIV
+  // adjustments do nothing and it's difficult to get out of this mode.
+
+  *(clk + PWMCLK_CNTL) = BCM_PASSWORD | 0x01;   // Stop PWM Clock
+  delayMicroseconds (110);   // prevents clock going sloooow
+
+  while ((*(clk + PWMCLK_CNTL) & 0x80) != 0)    // Wait for clock to be !BUSY
+    delayMicroseconds (1);
+
+  *(clk + PWMCLK_DIV)  = BCM_PASSWORD | (divisor << 12);
+
+  *(clk + PWMCLK_CNTL) = BCM_PASSWORD | 0x11;   // Start PWM clock
+  *(pwm + PWM_CONTROL) = pwm_control;           // restore PWM_CONTROL
+}
+
+void pwmSetMode(int mode) {
+  if (mode == PWM_MODE_MS)
+    *(pwm + PWM_CONTROL) = PWM0_ENABLE | PWM1_ENABLE | PWM0_MS_MODE | PWM1_MS_MODE;
+  else
+    *(pwm + PWM_CONTROL) = PWM0_ENABLE | PWM1_ENABLE;
+}
+
+void pwmSetRange(unsigned int range) {
+  *(pwm + PWM0_RANGE) = range; delayMicroseconds (10);
+  *(pwm + PWM1_RANGE) = range; delayMicroseconds (10);
+}
+
 extern "C" {
 
   // Setup GPIO mapped memory access and return zero if successful.
@@ -214,68 +274,49 @@ extern "C" {
     return 0;
   }
 
-  // Set the GPIO pin mode, where
-  //   FSEL_INPT   = input
-  //   FSEL_OUTP   = output
-  //   FSEL_ALT0   = pulse width modulation (software based?)
-  //   FSEL_ALT5   = pulse width modulation (hardware based?)
-  void setGpioMode(int bcmGpioPin, int mode) {
-    int offset = bcmGpioPin / 10;
-    int shift = (bcmGpioPin % 10) * 3;
-    *(gpio + offset) = (*(gpio + offset) & ~(7 << shift)) | ((mode & 0x7) << shift);
-  }
-
-  void pwmSetClock(int divisor) {
-    divisor &= 4095;
-    uint32_t pwm_control = *(pwm + PWM_CONTROL);  // preserve PWM_CONTROL
-
-    // Stop PWM prior to stopping PWM clock in MS mode otherwise BUSY stays high.
-
-    *(pwm + PWM_CONTROL) = 0;                     // Stop PWM
-
-    // Stop PWM clock before changing divisor. The delay after this does need to
-    // this big (95uS occasionally fails, 100uS OK), it's almost as though the BUSY
-    // flag is not working properly in balanced mode. Without the delay when DIV is
-    // adjusted the clock sometimes switches to very slow, once slow further DIV
-    // adjustments do nothing and it's difficult to get out of this mode.
-
-    *(clk + PWMCLK_CNTL) = BCM_PASSWORD | 0x01;   // Stop PWM Clock
-    delayMicroseconds (110);   // prevents clock going sloooow
-
-    while ((*(clk + PWMCLK_CNTL) & 0x80) != 0)    // Wait for clock to be !BUSY
-      delayMicroseconds (1);
-
-    *(clk + PWMCLK_DIV)  = BCM_PASSWORD | (divisor << 12);
-
-    *(clk + PWMCLK_CNTL) = BCM_PASSWORD | 0x11;   // Start PWM clock
-    *(pwm + PWM_CONTROL) = pwm_control;           // restore PWM_CONTROL
-  }
-
-  void pwmSetMode(int mode) {
-    if (mode == PWM_MODE_MS)
-      *(pwm + PWM_CONTROL) = PWM0_ENABLE | PWM1_ENABLE | PWM0_MS_MODE | PWM1_MS_MODE;
-    else
-      *(pwm + PWM_CONTROL) = PWM0_ENABLE | PWM1_ENABLE;
-  }
-
-  void pwmSetRange(unsigned int range) {
-    *(pwm + PWM0_RANGE) = range; delayMicroseconds (10);
-    *(pwm + PWM1_RANGE) = range; delayMicroseconds (10);
-  }
-
   // Initialize a GPIO pin for input where pullUpDown is
   //   0 = off
   //   1 = pull down (low)
   //   2 = pull up (high)
-  void setGpioInput(int64_t bcmGpioPin, int64_t pullUpDown) {
+  int64_t setGpioInput(int64_t bcmGpioPin, int64_t pullUpDown) {
     setGpioMode(bcmGpioPin, FSEL_INPT);
 
-    // 37 is GPIO up/down register, 38 and 39 are GPIO up/down set bits
-    *(gpio + 37) = pullUpDown & 3;                                   delayMicroseconds (5);
-    *(gpio + (bcmGpioPin < 32 ? 38 : 39)) = 1 << (bcmGpioPin & 31);  delayMicroseconds (5);
+    // Fixes and newer RPi support from
+    // https://github.com/sarnold/RPi.GPIO/blob/master/source/c_gpio.c
 
-    *(gpio + 37) = 0;                                                delayMicroseconds (5);
+    // Check GPIO register for new API
+    int is2711 = *(gpio + PULLUPDN_OFFSET_2711_3) != 0x6770696f;
+
+    if (is2711) {
+
+      // RPi 4 Pull-up/down method
+
+      int pullreg = PULLUPDN_OFFSET_2711_0 + (bcmGpioPin >> 4);
+      int pullshift = (bcmGpioPin & 0xf) << 1;
+      unsigned int pullbits;
+      unsigned int pull = 0;
+      if (pullUpDown == 1)      pull = 2;
+      else if (pullUpDown == 2) pull = 1;
+
+      pullbits = *(gpio + pullreg);
+      pullbits &= ~(3 << pullshift);
+      pullbits |= (pull << pullshift);
+      *(gpio + pullreg) = pullbits;
+
+      return 4; // Success on RPi 4
+    }
+
+    // Older RPi Pull-up/down method
+
+    // GPIO up/down register
+    *(gpio + PULLUPDN_OFFSET) = pullUpDown & 3;                               delayMicroseconds (5);
+    // GPIO up/down set bits
+    *(gpio + PULLUPDNCLK_OFFSET + (bcmGpioPin/32)) = 1 << (bcmGpioPin & 31);  delayMicroseconds (5);
+
+    *(gpio + PULLUPDN_OFFSET) = 0;                                   delayMicroseconds (5);
     *(gpio + (bcmGpioPin < 32 ? 38 : 39)) = 0;                       delayMicroseconds (5);
+
+    return 0;
   }
 
   // Initialize a GPIO pin for output.

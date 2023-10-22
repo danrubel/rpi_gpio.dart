@@ -1,20 +1,20 @@
 import 'dart:io';
 
 import 'package:path/path.dart';
-import 'package:rpi_gpio/src/rpi_gpio_isolate.dart';
+import 'package:rpi_gpio/src/native/rpi_gpio_ext.dart'
+    show findPkgRootDir, nativePkgName;
 
-const pkgName = 'rpi_gpio';
-const buildScriptVersion = 2;
+const buildScriptVersion = 3;
 
 void main(List<String> args) {
-  var pkgRootDir = findRpiGpioPkgRootDir(Directory.current);
+  var pkgRootDir = findPkgRootDir(Directory.current);
   print('Building library in ${pkgRootDir.path}');
 
   // Display the version of the rpi_gpio being built
   final pubspecFile = File(join(pkgRootDir.path, 'pubspec.yaml'));
   abortIf(!pubspecFile.existsSync(), 'Failed to find ${pubspecFile.path}');
   final pubspec = pubspecFile.readAsStringSync();
-  print('$pkgName version ${parseVersion(pubspec)}');
+  print('$nativePkgName version ${parseVersion(pubspec)}');
 
   // Build the native library
   final nativeDir = Directory(join(pkgRootDir.path, 'lib', 'src', 'native'));
@@ -27,7 +27,7 @@ void main(List<String> args) {
     print('Build failed: ${buildResult.exitCode}');
     exit(buildResult.exitCode);
   }
-  print('Build suceeded');
+  print('Build succeeded');
 }
 
 /// Parse the given content and return the version string
@@ -59,13 +59,7 @@ void assertRunningOnRaspberryPi() {
     throw 'Aborting build';
   }
   // Check for typical Raspbian install
-  if (Directory('/home/pi').existsSync()) return;
-  print('Typical setup not found... hopefully running on the Raspberry Pi...');
+  if (!Directory('/home/pi').existsSync()) {
+    print('Typical setup not found... assume Raspberry Pi...');
+  }
 }
-
-String get runBuildNativeInstructions => '''
-Must run ${Platform.script.pathSegments.last} from application directory that contains the pubspec.yaml file
-
-  cd /path/to/your/dart/application
-  dart ${Platform.script.path}
-''';

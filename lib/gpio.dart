@@ -112,5 +112,5 @@ class GpioException {
 
   @override
   String toString() =>
-      physicalPin != null ? '$message pin: $physicalPin' : message;
+      '$runtimeType(${physicalPin != null ? '$message: $physicalPin' : message})';
 }

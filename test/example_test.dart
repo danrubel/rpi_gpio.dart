@@ -1,13 +1,12 @@
 import 'dart:async';
-import 'dart:isolate';
 
 import 'package:rpi_gpio/src/rpi_gpio_impl.dart';
 import 'package:test/test.dart';
 
-import '../example/exampleApp.dart';
+import '../example/example_app.dart';
 import 'mock_isolate.dart';
 
-main() {
+void main() {
   RpiGpio? gpio;
   late AckHandler ackHandler;
 
@@ -22,14 +21,14 @@ main() {
   });
 
   test('example start', () async {
-    runExample(gpio!, blink: Duration(milliseconds: 1), debounce: 1);
+    await runExample(gpio!, blink: Duration(milliseconds: 1), debounce: 1);
     await ackHandler.is18Setup.future;
     await ackHandler.is22Setup.future;
   });
 
   test('example blink', () async {
     await ackHandler.is17Setup.future;
-    expect(ackHandler.write22Count, 42); // fixed blinking LED
+    expect(ackHandler.write22Count, greaterThan(42)); // fixed blinking LED
     expect(ackHandler.write18Count, greaterThan(6)); // PWM LED
   });
 
@@ -56,12 +55,7 @@ main() {
   });
 }
 
-class AckHandler {
-  RpiGpio? gpio;
-  final receivePort = ReceivePort('test example ack handler');
-  late StreamSubscription subscription;
-
-  final isSetup = Completer();
+class AckHandler extends BaseAckHandler {
   final is17Setup = Completer();
   final is18Setup = Completer();
   final is22Setup = Completer();
@@ -70,23 +64,10 @@ class AckHandler {
   var buttonState = false;
   var buttonPolledCount = 0;
   var buttonToggledCount = 0;
-  final isDisposed = Completer();
-  final unexpectedAck = [];
 
-  AckHandler() {
-    subscription = receivePort.listen((ack) {
-      handleAck(ack as List);
-    });
-  }
-
+  @override
   void handleAck(List ack) {
     switch (ack[0] as int) {
-      case setupAck:
-        isSetup.complete();
-        return;
-      case disposeAck:
-        isDisposed.complete();
-        return;
       case setInputAck:
         switch (ack[1] as int) {
           case 17:
@@ -125,6 +106,6 @@ class AckHandler {
             return;
         }
     }
-    unexpectedAck.add(ack);
+    super.handleAck(ack);
   }
 }

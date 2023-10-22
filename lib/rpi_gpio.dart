@@ -13,16 +13,19 @@ export 'package:rpi_gpio/src/rpi_gpio_impl.dart';
 ///
 /// If there is an unrecoverable error and onError is not `null`,
 /// then onError will be called with a [GpioException].
+// ignore: non_constant_identifier_names
 Future<RpiGpio> initialize_RpiGpio({
   bool i2c = true,
   bool spi = true,
   bool eeprom = true,
+  bool uart = true,
   Completer<GpioException>? onError,
 }) =>
     RpiGpio.init(
       i2c: i2c,
       spi: spi,
       eeprom: eeprom,
+      uart: uart,
       onError: onError,
       isolateEntryPoint: isolateMain,
     );

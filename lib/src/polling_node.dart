@@ -58,13 +58,15 @@ void stopPollingTimer() {
 }
 
 void startPollingTimer() {
-  if (polledNodes.isNotEmpty && pollingFrequency != null) {
+  if (polledNodes.isNotEmpty) {
     pollingTimer ??= Timer.periodic(pollingFrequency, pollInputs);
   }
 }
 
 void pollInputs([_]) {
-  for (var node in polledNodes) node.poll();
+  for (var node in polledNodes) {
+    node.poll();
+  }
 }
 
 void stopAllPolling() {

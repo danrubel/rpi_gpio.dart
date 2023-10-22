@@ -1,8 +1,6 @@
-include: package:pedantic/analysis_options.yaml
+include: package:lints/recommended.yaml
 
 analyzer:
-  strong-mode:
-    implicit-casts: false
   errors:
     dead_code: error
     unused_element: error
@@ -12,9 +10,13 @@ analyzer:
 
 linter:
   rules:
-    curly_braces_in_flow_control_structures: false
-
+    always_declare_return_types: true
     await_only_futures: true
     hash_and_equals: true
     implementation_imports: true
+    prefer_single_quotes: true
     prefer_typing_uninitialized_variables: true
+    sort_child_properties_last: true
+    unawaited_futures: true
+    unsafe_html: true
+    use_full_hex_values_for_flutter_colors: true

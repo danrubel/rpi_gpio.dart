@@ -16,7 +16,8 @@ class RpiGpioCmdHandler implements comm.CommandHandler {
 
   @override
   void setInputCmd(int bcmGpioPin, Pull pull) {
-    gpioLib.setGpioInput(bcmGpioPin, pull.index);
+    var result = gpioLib.setGpioInput(bcmGpioPin, pull.index);
+    sendPort.send(comm.setInputRsp(result));
   }
 
   @override
@@ -109,7 +110,7 @@ abstract class RpiGpioLib {
   int setupGpio();
   int disposeGpio();
 
-  void setGpioInput(int bcmGpioPin, int pullUpDown);
+  int setGpioInput(int bcmGpioPin, int pullUpDown);
   bool readGpio(int bcmGpioPin);
 
   void setGpioOutput(int bcmGpioPin);
