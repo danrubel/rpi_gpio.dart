@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.0
+* BREAKING: the API is unchanged, but this version relies on libgpiod
+    because /dev/gpiomem method is deprecated/unsupported/removed
+* update min SDK to 3.1.0
+
+## 0.9.2
+* updated and tested with Dart 3.2
+
 ## 0.9.1
 * BREAKING: Uart pins are reserved unless `uart: false` is passed when gpio is initialized
 * Fix GPIO input pull up/down on RPi 4

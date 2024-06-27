@@ -1,11 +1,18 @@
 import 'package:rpi_gpio/gpio.dart';
+import 'package:rpi_gpio/src/gpio_const.dart';
 
-Future runAllOutput(Gpio gpio, {Duration? blink}) async {
+Future runAllOutput(
+    Gpio gpio, bool skipI2c, bool skipSpi, bool skipEeprom, bool skipUart,
+    {Duration? blink}) async {
   blink ??= Duration(seconds: 1);
 
   // Allocate all pins as output
   for (var physicalPin = 1; physicalPin <= 40; ++physicalPin) {
-    if (nonOutputPins.contains(physicalPin)) continue;
+    if (physToBcmGpioRPi2[physicalPin] < 0) continue;
+    if (skipI2c && physI2CPins.contains(physicalPin)) continue;
+    if (skipSpi && physSpiPins.contains(physicalPin)) continue;
+    if (skipEeprom && physEepromPins.contains(physicalPin)) continue;
+    if (skipUart && physUartPins.contains(physicalPin)) continue;
     pins[physicalPin] = gpio.output(physicalPin)..value = false;
   }
 
@@ -23,28 +30,11 @@ Future runAllOutput(Gpio gpio, {Duration? blink}) async {
 }
 
 Future<void> blinkLed(int physicalPin, Gpio gpio, Duration blink) async {
-  if (nonOutputPins.contains(physicalPin)) return;
-  var pinOut = pins[physicalPin]!;
+  var pinOut = pins[physicalPin];
+  if (pinOut == null) return;
   pinOut.value = true;
   await Future.delayed(blink);
   pinOut.value = false;
 }
 
 final pins = <int, GpioOutput>{};
-
-var nonOutputPins = {
-  1, // 3.3V
-  2, // 5V
-  4, // 5V
-  6, // GND
-  9, // GND
-  14, // GND
-  17, // 3.3V
-  20, // GND
-  25, // GND
-  27, // Reserved
-  28, // Reserved
-  30, // GND
-  34, // GND
-  39, // GND
-};

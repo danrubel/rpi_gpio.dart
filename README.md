@@ -14,39 +14,16 @@ rpi_gpio is a Dart package for accessing the Raspberry Pi GPIO pins.
 
 ## Setup
 
-[__RpiGpio__](lib/rpi_gpio.dart) accesses the GPIO pins using a native library written in C.
-For security reasons, authors cannot publish binary content
-to [pub.dartlang.org](https://pub.dartlang.org/), so there are some extra
-steps necessary to compile the native library on the RPi before this package
-can be used. These two steps must be performed when you install and each time
-you upgrade the rpi_gpio package.
+**Installing `libgpiod`** (should already be installed)
 
-1) Activate the rpi_gpio package using the
-[pub global](https://www.dartlang.org/tools/pub/cmd/pub-global.html) command.
+[__RpiGpio__](lib/rpi_gpio.dart) accesses the GPIO pins using the native `libgpiod.so.2` library.
+If you are running the latest Raspberry Pi OS (formerly Raspbian),
+then this library should already be installed by default on your Raspberry Pi.
+If you are unsure, see #2 below in the troubleshooting section.
+If it is not already installed, open a terminal and run
 ```
-    pub global activate rpi_gpio
-```
-
-2) From your application directory (the application that references
-the rpi_gpio package) run the following command to build the native library
-```
-    pub global run rpi_gpio:build_native
-```
-
-[pub global activate](https://www.dartlang.org/tools/pub/cmd/pub-global.html#activating-a-package)
-makes the Dart scripts in the rpi_gpio/bin directory runnable
-from the command line.
-[pub global run](https://www.dartlang.org/tools/pub/cmd/pub-global.html#running-a-script)
-rpi_gpio:build_native runs the [rpi_gpio/bin/build_native.dart](bin/build_native.dart)
-program which in turn calls the [build_native](lib/src/native/build_native) script
-to compile the native librpi_gpio_ext.so library for the rpi_gpio package.
-
-**Alternately**, if you checked out `rpi_gpio` into it's own directory
-and are modifying it or referencing it from a different `pubspec.yaml` using a relative path,
-then you can skip #1 and #2 above, and just run
-```
-    cd /to/your/local/rpi_gpio
-    dart bin/build_native.dart
+sudo apt update
+sudo apt install libgpiod2
 ```
 
 ## Example
@@ -61,3 +38,52 @@ to demonstrate:
 The example is structured such that the [example test](test/example_test.dart)
 can inject a mock gpio to facilitate testing and allow test execution on platforms
 other than the Raspberry Pi.
+
+## Testing
+
+Latest Raspberry Pi OS (2024-05-29)
+
+| Raspberry Pi Hardware | Dart version |
+| --- | --- |
+| Pi 5 Model B Rev 1.0 | 3.3.4 (stable) (Tue Apr 16 19:56:12 2024 +0000) on "linux_arm64" |
+| Pi 3 Model B Rev 1.2 | 3.3.4 (stable) (Tue Apr 16 19:56:12 2024 +0000) on "linux_arm64" |
+| Pi 2 Model B Rev 1.1 | 3.3.4 - 32 bit |
+
+## Troubleshooting
+
+1) Run `test/src/native/show_hardware_and_os.dart` and record the output
+
+2) Run `test/src/native/show_lib_version.dart` to see if the `libgpiod.so.2` library can be located
+
+3) If running `test/src/native/blink_led.dart` crashes then there may be a 32 bit / 64 bit mismatch. Check that the board, the OS, and the Dart SDK are all either 32 bit or 64 bit.
+
+4) If running `test/src/native/blink_led.dart` doesn't crash, but doesn't blink the LED
+(where the LED and resistor are connected in series to GPIO 17 (pin 11) and ground) then
+```
+sudo apt-get install libgpiod-dev
+gpioinfo
+```
+and and check to see that the `gpiochip#` listing all of the `GPIO#`
+(for example "gpiochip4" below)
+```
+$ gpioinfo
+gpiochip0 - 32 lines:
+  ...
+gpiochip4 - 54 lines:
+	line   0:     "ID_SDA"       unused   input  active-high
+	line   1:     "ID_SCL"       unused   input  active-high
+	line   2:      "GPIO2"       unused   input  active-high
+	line   3:      "GPIO3"       unused   input  active-high
+	line   4:      "GPIO4"       unused   input  active-high
+  ...
+```
+matches the `Gpio Chip` information in #1 above.
+(for example "gpiochip4" below)
+```
+$ dart test/src/native/show_hardware_and_os.dart
+CPU          : aarch64
+  ...
+Is Rpi 5     : true
+Gpio Chip    : gpiochip4
+
+```

@@ -126,7 +126,7 @@ void main() {
 }
 
 // ignore: camel_case_types
-class GpioInput_allValues_Mock extends GpioInput {
+class GpioInput_allValues_Mock with GpioInput {
   final StreamController<bool> valuesController = StreamController<bool>();
 
   @override

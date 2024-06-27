@@ -268,7 +268,7 @@ class _RpiGpioCommonOutput extends _RpiGpioCommon {
 }
 
 class RpiGpioOutput extends _RpiGpioCommonOutput with GpioOutput {
-  RpiGpioOutput._(RpiGpio gpio, int physicalPin) : super._(gpio, physicalPin);
+  RpiGpioOutput._(super.gpio, super.physicalPin) : super._();
 
   @override
   set value(bool newValue) {
@@ -277,7 +277,7 @@ class RpiGpioOutput extends _RpiGpioCommonOutput with GpioOutput {
 }
 
 class RpiGpioPwm extends _RpiGpioCommonOutput with GpioPwm {
-  RpiGpioPwm._(RpiGpio gpio, int physicalPin) : super._(gpio, physicalPin);
+  RpiGpioPwm._(super.gpio, super.physicalPin) : super._();
 
   @override
   set dutyCycle(int percentOn) {

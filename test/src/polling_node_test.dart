@@ -80,7 +80,7 @@ void main() {
 class MockPolledNode extends PolledNode {
   Completer<void>? polled;
 
-  MockPolledNode(int bcmGpioPin) : super(bcmGpioPin);
+  MockPolledNode(super.bcmGpioPin);
 
   @override
   void poll() {

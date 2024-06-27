@@ -11,7 +11,10 @@ class RpiGpioCmdHandler implements comm.CommandHandler {
 
   RpiGpioCmdHandler(this.sendPort, this.gpioLib) {
     var result = gpioLib.setupGpio();
-    if (result != 0) throw GpioException('Init Gpio failed: $result');
+    if (result != 0) {
+      throw GpioException('Init Gpio failed: $result'
+          '\n  Has Gpio been enabled via the Raspberry Pi Configuration Tool?');
+    }
   }
 
   @override

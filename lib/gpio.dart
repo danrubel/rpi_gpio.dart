@@ -48,7 +48,7 @@ abstract class Gpio {
 }
 
 /// A GPIO input pin.
-abstract class GpioInput {
+mixin GpioInput {
   Future<bool> get value;
 
   /// When the value of the input changes,
@@ -89,12 +89,12 @@ class _ChangedValueTransformer<T> extends StreamTransformerBase<T, T> {
 }
 
 /// A GPIO output pin.
-abstract class GpioOutput {
+mixin GpioOutput {
   set value(bool newValue);
 }
 
 /// A GPIO software driven PWM pin.
-abstract class GpioPwm {
+mixin GpioPwm {
   /// Sets the percent of time that the GPIO pin is on/high/true,
   /// where 0 is off/low/false all of the time and 100 is on/high/true all of the time.
   set dutyCycle(int percentOn);

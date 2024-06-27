@@ -24,7 +24,8 @@ void main() {
   });
 
   test('run', () async {
-    await runAllOutput(gpio!, blink: Duration(milliseconds: 1));
+    await runAllOutput(gpio!, false, false, false, false,
+        blink: Duration(milliseconds: 1));
   });
 
   test('dispose', () async {

@@ -12,8 +12,8 @@ Future runExample(Gpio gpio, {Duration? blink, int? debounce}) async {
   debounce ??= 250;
 
   // Blink the LED 3 times for each PWM level
-  final led = gpio.output(15);
-  final pwmLed = gpio.pwm(12);
+  final led = gpio.output(15); // GPIO 22
+  final pwmLed = gpio.pwm(12); // GPIO 18
   for (var dutyCycle in dutyCycleValues) {
     pwmLed.dutyCycle = dutyCycle;
     print('PWM Led brightness $dutyCycle %');
@@ -29,7 +29,7 @@ Future runExample(Gpio gpio, {Duration? blink, int? debounce}) async {
   pwmLed.dutyCycle = 0; // off
 
   // Get the current button state
-  final button = gpio.input(11, Pull.up);
+  final button = gpio.input(11, Pull.up); // GPIO 17
   print('Button state: ${await button.value}');
 
   // Wait for the button to be pressed 3 times
@@ -48,7 +48,7 @@ Future runExample(Gpio gpio, {Duration? blink, int? debounce}) async {
     }
     led.value = lastValue = newValue;
   });
-  print('Waiting for 3 button presses...');
+  print('Waiting for 3 button presses on GPIO 17 pin 11...');
   await completer.future.timeout(const Duration(seconds: 15), onTimeout: () {
     print('Stopped waiting for button presses');
   });

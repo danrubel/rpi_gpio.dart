@@ -169,7 +169,7 @@ class MockPwmNode extends PwmNode {
   bool state = false;
   Completer<bool>? stateChanged;
 
-  MockPwmNode(int bcmGpioPin, int dutyCycle) : super(bcmGpioPin, dutyCycle);
+  MockPwmNode(super.bcmGpioPin, super.dutyCycle);
 
   @override
   void write(bool newValue) {
