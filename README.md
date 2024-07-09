@@ -6,11 +6,11 @@ rpi_gpio is a Dart package for accessing the Raspberry Pi GPIO pins.
 
 ## Overview
 
- * The [__Gpio__](lib/gpio.dart) library provides the API
+ * [__Gpio__](lib/gpio.dart) provides the API
    for accessing the various General Purpose I/O pins on the Raspberry Pi.
 
  * [__RpiGpio__](lib/rpi_gpio.dart) provides the implementation
-   for the __Gpio__ API derived from the WiringPi library.
+   for the __Gpio__ API via the native `libgpiod.so.2` library.
 
 ## Setup
 
