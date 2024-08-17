@@ -48,6 +48,7 @@ Latest Raspberry Pi OS (2024-05-29)
 | Pi 5 Model B Rev 1.0 | 3.3.4 (stable) (Tue Apr 16 19:56:12 2024 +0000) on "linux_arm64" |
 | Pi 3 Model B Rev 1.2 | 3.3.4 (stable) (Tue Apr 16 19:56:12 2024 +0000) on "linux_arm64" |
 | Pi 2 Model B Rev 1.1 | 3.3.4 - 32 bit |
+| Pi 1 Model B Rev 2   | unsupported    |
 
 ## Troubleshooting
 
